@@ -119,7 +119,9 @@ CREATE TABLE tasks (
 
   -- Account relationship (partner/distributor editable per task
   -- to support multi-partner scenarios on the same account)
-  account_id       UUID            NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+  -- account_id nullable: tasks may start partner-only with no known end customer.
+  -- "Link to account" sets account_id via PATCH /api/tasks/:id
+  account_id       UUID            REFERENCES accounts(id) ON DELETE RESTRICT,
   partner_name     TEXT,                          -- nullable: no partner on some tasks
   distributor_name TEXT,
 

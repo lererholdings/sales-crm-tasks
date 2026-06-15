@@ -18,6 +18,8 @@ A personal sales task management system for tracking pre-sale and post-sale acti
 sales-crm-tasks/
   docs/
     design.md        ← full PRD + Technical Design Document
+    mockups/
+      main-view-v3.html  ← final approved UI mockup (open in browser)
   db/
     schema.sql       ← Postgres DDL (run once in Supabase SQL editor)
   frontend/          ← React app (to be scaffolded)
@@ -33,6 +35,7 @@ See `docs/design.md` for the full system design, data model, and implementation 
 - [x] System design
 - [x] Data model + schema
 - [x] API spec
+- [x] UI mockup (docs/mockups/main-view-v3.html)
 - [ ] Frontend component map
-- [ ] Implementation
-- [ ] Deployments
+- [ ] Implementation plan
+- [ ] Deployment

@@ -169,7 +169,7 @@ tasks
 |---|---|---|
 | id | UUID PK | |
 | task_name | TEXT | Short title shown in table |
-| account_id | UUID FK → accounts | ON DELETE RESTRICT |
+| account_id | UUID FK → accounts | **Nullable.** Null = partner-only task with no known end customer. Set via "Link to account" action. ON DELETE RESTRICT |
 | partner_name | TEXT | Nullable. Editable per task |
 | distributor_name | TEXT | Nullable. Editable per task |
 | task_type_id | UUID FK → task_types | |
@@ -254,45 +254,52 @@ Single-page application with four main areas:
 
 The primary working view. Rows are grouped by account + partner combination with collapsible group headers.
 
+**Group header labelling rules:**
+- Account + partner → `Acme Corp — PartnerX`
+- Account, no partner → `Acme Corp`
+- Partner only, no account yet → `PartnerZ` + a "Partner only" pill badge
+
 **Example layout:**
 ```
-▼ Acme Corp — PartnerX
-     Demo        High    In Progress   John   15 Jun
-     RFP         Medium  Backlog       Sara   30 Jun
+▼ Acme Corp — PartnerX          2 tasks
+     RFP response   High   In progress   Sara   20 Jun   2d: Sent initial draft
+     Product demo   Medium Backlog       John   30 Jun   5d: Scheduled end of month
 
-▼ Acme Corp — PartnerY
-     POC         Critical  In Progress  John  20 Jun
+▼ Acme Corp                     1 task
+     Renewal quote  High   Backlog       John   15 Jul   today: Contract expires Aug 1
 
-▼ BetaCo — (no partner)
-     Follow-up   Low     Waiting       Mike  —
+▼ PartnerZ  [Partner only]      1 task
+     Partner RFI    High   Backlog       Mike   25 Jun   1d: Asked about pricing tiers
+
+▼ BetaCo                        1 task
+     Support f/up   Low    Waiting       Mike   —        3d: Escalated to tier 2
 ```
 
 **Columns (all reorderable and toggleable per user):**
 
 | Column key | Label | Notes |
 |---|---|---|
-| task_name | Task | Clickable → opens side panel |
-| account | Account | Group header, not repeated per row |
-| partner | Partner | Group header, not repeated per row |
-| type | Type | Category + subtype |
-| assignee | Assignee | User display name |
+| task_name | Task | Clickable → opens side panel. Hover reveals ⋯ context menu |
+| type | Type | Category · subtype |
+| assignee | Assignee | Avatar (green/blue initials circle) + name |
 | next_action | Next action | Short text |
-| priority | Priority | Badge: Critical / High / Medium / Low |
-| status | Status | Dropdown inline |
-| eta | ETA | Date |
-| contract_value | Contract value | Numeric |
-| country | Country | From account |
-| notes_preview | Notes | Last N notes with timestamp |
+| priority | Priority | Colour-coded pill badge |
+| status | Status | Colour-coded pill |
+| eta | ETA | Date. Red + bold if overdue or imminent |
+| notes_preview | Notes | Last N notes inline (N = user preference, default 2) |
 | last_updated | Last updated | Timestamp + user |
 
 **Toolbar:**
-- Filter by: account, country, priority, status, type, subtype, assignee, partner, contract value range
-- Sort by: any column
-- Free text search: across task name, account name, notes
-- "+ New Task" button
+- Filter chips: Status, Assignee, Priority, Type, Partner (active chip highlights in green)
+- Free text search across task name, account name, notes
+- Columns toggle panel (show/hide/reorder)
+- "+ New task" button (emerald)
+
+**Context menu (⋯ on row hover):**
+Appears as a floating menu on the task name cell. Always contains: Edit task, Duplicate, Delete task. For partner-only tasks (no account): also shows "Link to account" at the top in green.
 
 **Notes preview inline:**
-Shows last N notes (N = user preference, default 2). Format: `2d ago · John: Sent draft RFP...`
+Format: `2d: Sent initial draft to customer`. Shows last N notes (N from user preferences).
 
 ### Task side panel
 
@@ -774,6 +781,25 @@ _To be completed in next design session._
 
 ---
 
+## 10b. UI mockups
+
+Visual mockups are saved as standalone interactive HTML files in `docs/mockups/`. Open in any browser.
+
+| File | Description |
+|---|---|
+| `main-view-v3.html` | Final approved main view — task table with grouping, side panel, context menu, partner-only task row |
+
+**Mockup notes:**
+- Colour palette: emerald/green (`#085041` navbar, `#1D9E75` accents, `#9FE1CB` group headers)
+- Avatars: green and blue initials circles only — no other colours
+- Context menu (⋯): appears on row hover. Partner-only rows show "Link to account" in green at top
+- Group labels: `Account — Partner` / `Account` / `Partner [Partner only]`
+- Selected row: subtle gray background + green left border (not a coloured fill)
+- Task names: soft green (`#1D9E75`) — readable without being harsh
+- **Dark mode**: required feature. Toggle in navbar. Also auto-respects OS-level dark mode preference (`prefers-color-scheme`). Dark surfaces: `#1a1f1e` page, `#222927` panels, `#0F4035` group headers
+
+---
+
 ## 11. Future features
 
 | Feature | Notes |
@@ -795,8 +821,13 @@ _To be completed in next design session._
 | Supabase usage | Plain Postgres only | No Supabase Auth, Realtime, or auto-API. Keeps migration path open. |
 | Kanban vs table | Rich table with grouped rows | Table provides more data density. Grouping by account + partner gives visual organisation without losing filtering/sorting. |
 | Task uniqueness | No unique constraint on account + partner | Multiple concurrent tasks per account + partner is a valid and common scenario (e.g. Demo + RFP running simultaneously). |
-| Account fields on task | Editable per task | Supports scenario where two different partners target the same prospect — each task can have different partner/distributor/contract value while sharing the same account. |
+| Account fields on task | Partner/distributor editable per task, ACV on account only | Supports scenario where two different partners target the same prospect. ACV is a single source of truth on the account, history tracked via audit log. |
 | SFDC integration | Links only (no API) | Sufficient for current needs. Full API pull deferred to future feature. |
 | Audit log visibility | Admin only | Enforced at API middleware. Not a UI-level restriction only. |
 | Column layout | User preferences in DB | Per-user column order and visibility stored in `user_preferences` table as JSONB. Survives browser/device changes. |
 | Notes | Append log with timestamps | Notes are a communication trail, not a single editable field. Each note is a separate record with author and timestamp. |
+| Clerk login UI | Clerk hosted page (no custom login UI) | Clerk redirects unauthenticated users to its hosted login and returns them via callback. We own zero login, password reset, or session UI. |
+| Clerk session lifetime | Free tier accepted (7-day rolling session) | Clerk uses short-lived JWTs (60s) silently refreshed by the SDK while the user is active. The 7-day window resets on each use, so daily users will never hit the limit. MFA not available on free tier — acceptable for now. If session length or MFA becomes a requirement, upgrading to Clerk Pro ($25/month) requires no stack changes. |
+| Partner-only tasks | `account_id` nullable on tasks | A task may originate from a partner query before the end customer is known. The group header shows `PartnerZ [Partner only]`. A "Link to account" option in the context menu sets `account_id` via PATCH. |
+| Context menu | ⋯ button on row hover | Keeps the table clean. All task actions (edit, duplicate, delete, link to account) live in the context menu rather than cluttering the row or notes column. |
+| UI theme | Emerald/green palette, Clerk-style typography, dark mode | Navbar: `#085041`. Accents: `#1D9E75`. Group headers: `#9FE1CB`. Avatars: green and blue only. Task names: soft green. Selected row: gray bg + green left border. Dark mode toggle in navbar; also respects OS preference. Dark surfaces: `#1a1f1e` / `#222927`. |

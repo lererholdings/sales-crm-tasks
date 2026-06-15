@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales CRM — Tasks (Mockup v3)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+  <style>
+    :root {
+      --bg-page:            #e8e8e3;
+      --bg-surface:         #ffffff;
+      --bg-raised:          #f5f5f0;
+      --bg-input:           #f0f0eb;
+      --border:             #d8d8d2;
+      --border-mid:         #c5c4be;
+      --text-primary:       #1a1a18;
+      --text-secondary:     #5f5e5a;
+      --text-muted:         #9a9a94;
+      --group-bg:           #9FE1CB;
+      --group-border:       #5DCAA5;
+      --group-text:         #04342C;
+      --group-count-bg:     #5DCAA5;
+      --group-tag-bg:       #E1F5EE;
+      --group-tag-text:     #085041;
+      --chip-active-bg:     #E1F5EE;
+      --chip-active-border: #1D9E75;
+      --chip-active-text:   #085041;
+      --badge-crit-bg:      #FCEBEB; --badge-crit-text:    #A32D2D;
+      --badge-high-bg:      #FAEEDA; --badge-high-text:    #854F0B;
+      --badge-med-bg:       #EAF3DE; --badge-med-text:     #3B6D11;
+      --status-ip-bg:       #E6F1FB; --status-ip-text:     #185FA5;
+      --status-wait-bg:     #FAEEDA; --status-wait-text:   #854F0B;
+      --status-done-bg:     #EAF3DE; --status-done-text:   #3B6D11;
+      --note-border:        #e8e8e3;
+    }
+    [data-theme="dark"] {
+      --bg-page:            #1a1f1e;
+      --bg-surface:         #222927;
+      --bg-raised:          #1e2523;
+      --bg-input:           #1a1f1e;
+      --border:             #2e3a37;
+      --border-mid:         #3a4a46;
+      --text-primary:       #e8e8e3;
+      --text-secondary:     #9FE1CB;
+      --text-muted:         #5DCAA5;
+      --group-bg:           #0F4035;
+      --group-border:       #1D6B52;
+      --group-text:         #9FE1CB;
+      --group-count-bg:     #1D6B52;
+      --group-tag-bg:       #0A2E26;
+      --group-tag-text:     #5DCAA5;
+      --chip-active-bg:     #0A2E26;
+      --chip-active-border: #1D9E75;
+      --chip-active-text:   #5DCAA5;
+      --badge-crit-bg:      #3d1212; --badge-crit-text:    #F09595;
+      --badge-high-bg:      #2e1f08; --badge-high-text:    #FAC775;
+      --badge-med-bg:       #1a2e10; --badge-med-text:     #C0DD97;
+      --status-ip-bg:       #0d2238; --status-ip-text:     #85B7EB;
+      --status-wait-bg:     #2e1f08; --status-wait-text:   #FAC775;
+      --status-done-bg:     #1a2e10; --status-done-text:   #C0DD97;
+      --note-border:        #2e3a37;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-page); color: var(--text-primary); font-size: 14px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Navbar — always dark green regardless of theme */
+    .navbar { display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 52px; background: #085041; border-bottom: 1px solid #04342C; flex-shrink: 0; }
+    .navbar-brand { font-size: 15px; font-weight: 500; color: #fff; }
+    .nav-links { display: flex; gap: 4px; flex: 1; }
+    .nav-link { font-size: 13px; color: #5DCAA5; padding: 6px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+    .nav-link.active { background: rgba(255,255,255,0.13); color: #fff; }
+    .nav-link:hover  { background: rgba(255,255,255,0.08); color: #fff; }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+
+    /* Theme toggle — round icon button only */
+    .theme-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; color: #9FE1CB; font-size: 16px; flex-shrink: 0; }
+    .theme-btn:hover { background: rgba(255,255,255,0.22); }
+    .theme-btn i { pointer-events: none; }
+
+    /* Avatars */
+    .av { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 500; color: #fff; flex-shrink: 0; }
+    .av-g  { background: #1D9E75; }
+    .av-b  { background: #185FA5; }
+    .av-g2 { background: #0F6E56; }
+    .av-b2 { background: #378ADD; }
+    .av-lg { width: 24px; height: 24px; font-size: 10px; }
+    .av-navbar { width: 28px; height: 28px; font-size: 11px; background: #1D9E75; }
+
+    /* Toolbar */
+    .toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--bg-surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .toolbar-search { display: flex; align-items: center; gap: 6px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; height: 32px; flex: 1; max-width: 220px; }
+    .toolbar-search input { border: none; background: none; font-size: 13px; color: var(--text-primary); outline: none; width: 100%; font-family: inherit; }
+    .toolbar-search i { color: var(--text-muted); font-size: 15px; }
+    .filter-chip { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-surface); font-size: 12px; color: var(--text-secondary); cursor: pointer; white-space: nowrap; font-family: inherit; }
+    .filter-chip.active { border-color: var(--chip-active-border); color: var(--chip-active-text); background: var(--chip-active-bg); }
+    .toolbar-spacer { flex: 1; }
+    .btn-new { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 8px; background: #0F6E56; color: #fff; font-size: 13px; font-weight: 500; border: none; cursor: pointer; font-family: inherit; }
+
+    /* Main */
+    .main { display: flex; flex: 1; overflow: hidden; }
+    .table-area { flex: 1; overflow: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th { position: sticky; top: 0; background: var(--bg-page); color: var(--text-secondary); font-weight: 500; font-size: 12px; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+
+    /* Groups */
+    .group-row td { background: var(--group-bg); padding: 6px 12px; font-size: 12px; font-weight: 500; color: var(--group-text); border-top: 1px solid var(--group-border); border-bottom: 1px solid var(--group-border); }
+    .group-label { display: flex; align-items: center; gap: 8px; }
+    .group-count { font-weight: 400; font-size: 11px; background: var(--group-count-bg); color: var(--group-text); padding: 1px 7px; border-radius: 99px; }
+    .group-tag { font-weight: 400; font-size: 11px; color: var(--group-tag-text); background: var(--group-tag-bg); border: 1px solid var(--group-border); padding: 1px 7px; border-radius: 99px; }
+
+    /* Task rows */
+    .task-row td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; background: var(--bg-surface); }
+    .task-row:hover td { background: var(--bg-raised); cursor: pointer; }
+    .task-row.selected td { background: var(--bg-raised); }
+    .task-row.selected td:first-child { border-left: 2px solid #1D9E75; padding-left: 10px; }
+
+    .task-name { font-weight: 500; color: #1D9E75; font-size: 13px; display: flex; align-items: center; gap: 6px; position: relative; }
+    .task-name > i:first-child { font-size: 14px; color: #5DCAA5; }
+
+    /* Context trigger */
+    .task-row:hover .ctx-trigger { opacity: 1; }
+    .ctx-trigger { opacity: 0; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; border: 1px solid var(--border-mid); background: var(--bg-surface); cursor: pointer; flex-shrink: 0; }
+    .ctx-trigger i { font-size: 13px; color: var(--text-secondary); pointer-events: none; }
+
+    /* Context menu */
+    .ctx-menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 100; background: var(--bg-surface); border: 1px solid var(--border-mid); border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.18); padding: 4px; min-width: 180px; display: none; }
+    .ctx-menu.open { display: block; }
+    .ctx-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; font-size: 13px; color: var(--text-primary); border-radius: 6px; cursor: pointer; }
+    .ctx-item:hover { background: var(--bg-raised); }
+    .ctx-item i { font-size: 15px; color: var(--text-secondary); }
+    .ctx-item.link-acct { color: #1D9E75; }
+    .ctx-item.link-acct i { color: #1D9E75; }
+    .ctx-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+    /* Inline */
+    .assignee-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); }
+    .notes-preview { font-size: 11px; color: var(--text-secondary); max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .note-ts { color: var(--text-muted); margin-right: 3px; }
+    .eta-text { font-size: 12px; color: var(--text-secondary); }
+    .eta-urgent { color: #E24B4A; font-weight: 500; }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; }
+    .badge-critical { background: var(--badge-crit-bg); color: var(--badge-crit-text); }
+    .badge-high     { background: var(--badge-high-bg); color: var(--badge-high-text); }
+    .badge-medium   { background: var(--badge-med-bg);  color: var(--badge-med-text);  }
+    .badge-low      { background: var(--bg-raised);     color: var(--text-secondary);  }
+
+    .status-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 99px; }
+    .status-backlog     { background: var(--bg-raised);      color: var(--text-secondary);   }
+    .status-in_progress { background: var(--status-ip-bg);   color: var(--status-ip-text);   }
+    .status-waiting     { background: var(--status-wait-bg); color: var(--status-wait-text); }
+    .status-done        { background: var(--status-done-bg); color: var(--status-done-text); }
+
+    /* Side panel */
+    .side-panel { width: 320px; flex-shrink: 0; background: var(--bg-surface); border-left: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
+    .panel-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
+    .panel-title { font-size: 15px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; }
+    .panel-badges { display: flex; gap: 6px; }
+    .panel-section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    .panel-section-label { font-size: 10px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .panel-field { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; font-size: 13px; }
+    .panel-field-label { color: var(--text-secondary); }
+    .panel-field-value { color: var(--text-primary); font-weight: 500; }
+    .panel-link { color: #1D9E75; font-size: 12px; display: inline-flex; align-items: center; gap: 3px; text-decoration: none; cursor: pointer; }
+    .panel-link i { font-size: 13px; }
+    .panel-links { display: flex; gap: 12px; margin-top: 6px; }
+    .last-updated { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+    .acv-value { font-size: 13px; font-weight: 500; color: #1D9E75; }
+
+    /* Notes */
+    .notes-section { padding: 12px 16px; flex: 1; }
+    .note-item { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--note-border); }
+    .note-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+    .note-content { font-size: 13px; color: var(--text-primary); line-height: 1.5; }
+    .note-time { font-size: 11px; color: var(--text-muted); }
+    .note-author { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+    .add-note textarea { width: 100%; font-size: 13px; padding: 8px 10px; border: 1px solid var(--border-mid); border-radius: 8px; resize: none; height: 60px; background: var(--bg-input); color: var(--text-primary); font-family: inherit; outline: none; }
+    .add-note textarea:focus { border-color: #1D9E75; }
+    .btn-post { margin-top: 6px; height: 28px; padding: 0 14px; border-radius: 8px; background: #0F6E56; color: #fff; font-size: 12px; font-weight: 500; border: none; cursor: pointer; font-family: inherit; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <span class="navbar-brand">Sales CRM — Tasks</span>
+    <div class="nav-links">
+      <a class="nav-link active"><i class="ti ti-layout-list"></i> Tasks</a>
+      <a class="nav-link"><i class="ti ti-building"></i> Accounts</a>
+      <a class="nav-link"><i class="ti ti-settings"></i> Admin</a>
+    </div>
+    <div class="nav-right">
+      <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">
+        <i class="ti ti-moon" id="theme-icon"></i>
+      </button>
+      <div class="av av-navbar">CL</div>
+    </div>
+  </nav>
+
+  <div class="toolbar">
+    <div class="toolbar-search">
+      <i class="ti ti-search"></i>
+      <input placeholder="Search tasks, accounts, notes…" />
+    </div>
+    <button class="filter-chip active"><i class="ti ti-filter"></i> Status</button>
+    <button class="filter-chip"><i class="ti ti-user"></i> Assignee</button>
+    <button class="filter-chip"><i class="ti ti-flag"></i> Priority</button>
+    <button class="filter-chip"><i class="ti ti-tag"></i> Type</button>
+    <button class="filter-chip"><i class="ti ti-columns"></i> Columns</button>
+    <div class="toolbar-spacer"></div>
+    <button class="btn-new"><i class="ti ti-plus"></i> New task</button>
+  </div>
+
+  <div class="main">
+    <div class="table-area">
+      <table>
+        <thead>
+          <tr>
+            <th>Task</th><th>Type</th><th>Assignee</th><th>Next action</th>
+            <th>Priority</th><th>Status</th><th>ETA</th><th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <tr class="group-row">
+            <td colspan="8"><div class="group-label"><i class="ti ti-chevron-down"></i> Acme Corp — PartnerX <span class="group-count">2 tasks</span></div></td>
+          </tr>
+          <tr class="task-row selected">
+            <td><div class="task-name"><i class="ti ti-file-text"></i>RFP response
+              <span class="ctx-trigger" onclick="toggleMenu('m1',event)"><i class="ti ti-dots"></i></span>
+              <div class="ctx-menu" id="m1">
+                <div class="ctx-item"><i class="ti ti-edit"></i>Edit task</div>
+                <div class="ctx-item"><i class="ti ti-copy"></i>Duplicate</div>
+                <hr class="ctx-divider">
+                <div class="ctx-item"><i class="ti ti-trash"></i>Delete task</div>
+              </div>
+            </div></td>
+            <td style="font-size:12px;color:var(--text-secondary);">Pre-sale · RFP</td>
+            <td><div class="assignee-chip"><div class="av av-g">SL</div> Sara</div></td>
+            <td style="font-size:12px;color:var(--text-secondary);">Send draft by Friday</td>
+            <td><span class="badge badge-high">High</span></td>
+            <td><span class="status-pill status-in_progress"><i class="ti ti-circle-dot"></i> In progress</span></td>
+            <td><span class="eta-urgent">20 Jun</span></td>
+            <td><div class="notes-preview"><span class="note-ts">2d:</span>Sent initial draft</div></td>
+          </tr>
+          <tr class="task-row">
+            <td><div class="task-name"><i class="ti ti-presentation"></i>Product demo
+              <span class="ctx-trigger" onclick="toggleMenu('m2',event)"><i class="ti ti-dots"></i></span>
+              <div class="ctx-menu" id="m2">
+                <div class="ctx-item"><i class="ti ti-edit"></i>Edit task</div>
+                <div class="ctx-item"><i class="ti ti-copy"></i>Duplicate</div>
+                <hr class="ctx-divider">
+                <div class="ctx-item"><i class="ti ti-trash"></i>Delete task</div>
+              </div>
+            </div></td>
+            <td style="font-size:12px;color:var(--text-secondary);">Pre-sale · Demo</td>
+            <td><div class="assignee-chip"><div class="av av-b">JM</div> John</div></td>
+            <td style="font-size:12px;color:var(--text-secondary);">Confirm attendees</td>
+            <td><span class="badge badge-medium">Medium</span></td>
+            <td><span class="status-pill status-backlog"><i class="ti ti-circle"></i> Backlog</span></td>
+            <td><span class="eta-text">30 Jun</span></td>
+            <td><div class="notes-preview"><span class="note-ts">5d:</span>Scheduled end of month</div></td>
+          </tr>
+
+          <tr class="group-row">
+            <td colspan="8"><div class="group-label"><i class="ti ti-chevron-down"></i> Acme Corp <span class="group-count">1 task</span></div></td>
+          </tr>
+          <tr class="task-row">
+            <td><div class="task-name"><i class="ti ti-refresh"></i>Renewal quote
+              <span class="ctx-trigger" onclick="toggleMenu('m3',event)"><i class="ti ti-dots"></i></span>
+              <div class="ctx-menu" id="m3">
+                <div class="ctx-item"><i class="ti ti-edit"></i>Edit task</div>
+                <div class="ctx-item"><i class="ti ti-copy"></i>Duplicate</div>
+                <hr class="ctx-divider">
+                <div class="ctx-item"><i class="ti ti-trash"></i>Delete task</div>
+              </div>
+            </div></td>
+            <td style="font-size:12px;color:var(--text-secondary);">Account · Quote</td>
+            <td><div class="assignee-chip"><div class="av av-b">JM</div> John</div></td>
+            <td style="font-size:12px;color:var(--text-secondary);">Draft renewal pricing</td>
+            <td><span class="badge badge-high">High</span></td>
+            <td><span class="status-pill status-backlog"><i class="ti ti-circle"></i> Backlog</span></td>
+            <td><span class="eta-text">15 Jul</span></td>
+            <td><div class="notes-preview"><span class="note-ts">today:</span>Contract expires Aug 1</div></td>
+          </tr>
+
+          <tr class="group-row">
+            <td colspan="8"><div class="group-label"><i class="ti ti-chevron-down"></i> PartnerZ <span class="group-tag">Partner only</span> <span class="group-count">1 task</span></div></td>
+          </tr>
+          <tr class="task-row">
+            <td><div class="task-name"><i class="ti ti-help-circle"></i>Partner RFI query
+              <span class="ctx-trigger" onclick="toggleMenu('m4',event)"><i class="ti ti-dots"></i></span>
+              <div class="ctx-menu" id="m4">
+                <div class="ctx-item link-acct"><i class="ti ti-link"></i>Link to account</div>
+                <hr class="ctx-divider">
+                <div class="ctx-item"><i class="ti ti-edit"></i>Edit task</div>
+                <div class="ctx-item"><i class="ti ti-copy"></i>Duplicate</div>
+                <hr class="ctx-divider">
+                <div class="ctx-item"><i class="ti ti-trash"></i>Delete task</div>
+              </div>
+            </div></td>
+            <td style="font-size:12px;color:var(--text-secondary);">Pre-sale · RFI</td>
+            <td><div class="assignee-chip"><div class="av av-b2">MR</div> Mike</div></td>
+            <td style="font-size:12px;color:var(--text-secondary);">Respond to partner query</td>
+            <td><span class="badge badge-high">High</span></td>
+            <td><span class="status-pill status-backlog"><i class="ti ti-circle"></i> Backlog</span></td>
+            <td><span class="eta-text">25 Jun</span></td>
+            <td><div class="notes-preview"><span class="note-ts">1d:</span>Asked about pricing tiers</div></td>
+          </tr>
+
+          <tr class="group-row">
+            <td colspan="8"><div class="group-label"><i class="ti ti-chevron-down"></i> BetaCo <span class="group-count">1 task</span></div></td>
+          </tr>
+          <tr class="task-row">
+            <td><div class="task-name"><i class="ti ti-headset"></i>Support follow-up
+              <span class="ctx-trigger" onclick="toggleMenu('m5',event)"><i class="ti ti-dots"></i></span>
+              <div class="ctx-menu" id="m5">
+                <div class="ctx-item"><i class="ti ti-edit"></i>Edit task</div>
+                <div class="ctx-item"><i class="ti ti-copy"></i>Duplicate</div>
+                <hr class="ctx-divider">
+                <div class="ctx-item"><i class="ti ti-trash"></i>Delete task</div>
+              </div>
+            </div></td>
+            <td style="font-size:12px;color:var(--text-secondary);">Post-sale · Support</td>
+            <td><div class="assignee-chip"><div class="av av-g2">MR</div> Mike</div></td>
+            <td style="font-size:12px;color:var(--text-secondary);">Chase ticket #4421</td>
+            <td><span class="badge badge-low">Low</span></td>
+            <td><span class="status-pill status-waiting"><i class="ti ti-clock"></i> Waiting</span></td>
+            <td><span class="eta-text">—</span></td>
+            <td><div class="notes-preview"><span class="note-ts">3d:</span>Escalated to tier 2</div></td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <div class="side-panel">
+      <div class="panel-header">
+        <div class="panel-title">RFP response</div>
+        <div class="panel-badges">
+          <span class="status-pill status-in_progress"><i class="ti ti-circle-dot"></i> In progress</span>
+          <span class="badge badge-high">High</span>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-label">Account</div>
+        <div class="panel-field"><span class="panel-field-label">Account</span><span class="panel-field-value">Acme Corp</span></div>
+        <div class="panel-field"><span class="panel-field-label">Partner</span><span class="panel-field-value">PartnerX</span></div>
+        <div class="panel-field"><span class="panel-field-label">Country</span><span class="panel-field-value">Australia</span></div>
+        <div class="panel-field"><span class="panel-field-label">ACV</span><span class="acv-value">$120,000</span></div>
+        <div class="panel-links">
+          <a class="panel-link"><i class="ti ti-external-link"></i> SFDC account</a>
+          <a class="panel-link"><i class="ti ti-external-link"></i> SFDC task</a>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-label">Task detail</div>
+        <div class="panel-field"><span class="panel-field-label">Type</span><span class="panel-field-value">Pre-sale · RFP</span></div>
+        <div class="panel-field"><span class="panel-field-label">ETA</span><span class="eta-urgent" style="font-size:13px;font-weight:500;">20 Jun 2026</span></div>
+        <div class="panel-field"><span class="panel-field-label">Assignee</span><div class="assignee-chip"><div class="av av-g av-lg">SL</div> Sara L.</div></div>
+        <div class="panel-field"><span class="panel-field-label">Next action</span><span style="font-size:12px;color:var(--text-secondary);">Send draft by Friday</span></div>
+        <div class="last-updated">Updated by John M. · 2 days ago</div>
+      </div>
+      <div class="notes-section">
+        <div class="panel-section-label">Notes</div>
+        <div class="note-item">
+          <div class="note-meta"><div class="av av-b av-lg">JM</div><span class="note-author">John M.</span><span class="note-time">· 5 Jun</span></div>
+          <div class="note-content">Received RFP from procurement. Deadline is June 20. Looping in Sara to lead the response.</div>
+        </div>
+        <div class="note-item">
+          <div class="note-meta"><div class="av av-g av-lg">SL</div><span class="note-author">Sara L.</span><span class="note-time">· 13 Jun</span></div>
+          <div class="note-content">Sent initial draft to customer. Waiting on their technical requirements section.</div>
+        </div>
+        <div class="add-note">
+          <textarea placeholder="Add a note… (markdown supported)"></textarea>
+          <button class="btn-post">Post note</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleMenu(id, e) {
+      e.stopPropagation();
+      document.querySelectorAll('.ctx-menu').forEach(m => { if (m.id !== id) m.classList.remove('open'); });
+      document.getElementById(id).classList.toggle('open');
+    }
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.ctx-menu').forEach(m => m.classList.remove('open'));
+    });
+
+    function toggleTheme() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      document.getElementById('theme-icon').className = isDark ? 'ti ti-moon' : 'ti ti-sun';
+    }
+
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.getElementById('theme-icon').className = 'ti ti-sun';
+    }
+  </script>
+</body>
+</html>
