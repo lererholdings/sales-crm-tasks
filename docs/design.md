@@ -14,10 +14,10 @@
 4. [Stack and infrastructure](#4-stack-and-infrastructure)
 5. [Data model](#5-data-model)
 6. [UI design](#6-ui-design)
-7. [API design](#7-api-design) ← next to be completed
-8. [Frontend components](#8-frontend-components) ← next to be completed
-9. [Implementation plan](#9-implementation-plan) ← next to be completed
-10. [Deployment guide](#10-deployment-guide) ← next to be completed
+7. [API design](#7-api-design)
+8. [Frontend components](#8-frontend-components)
+9. [Implementation plan](#9-implementation-plan) ← to be completed
+10. [Deployment guide](#10-deployment-guide) ← to be completed
 11. [Future features](#11-future-features)
 12. [Design decisions log](#12-design-decisions-log)
 
@@ -765,7 +765,168 @@ PATCH /api/tasks/:id/from-email  → update task from Outlook plugin
 
 ## 8. Frontend components
 
-_To be completed in next design session._
+### Application shell
+
+```
+App
+  ├── ClerkProvider              (wraps everything — session context)
+  ├── RouterProvider             (client-side routing)
+  └── Layout
+        ├── Navbar               (logo, nav links, theme toggle, user avatar)
+        └── ProtectedRoute       (checks Clerk session → redirects to Clerk hosted login if not authenticated)
+              └── Page (outlet)
+```
+
+---
+
+### Pages and route map
+
+| Path | Page component | Access |
+|---|---|---|
+| `/` | Redirect → `/tasks` | — |
+| `/tasks` | TasksPage | Any authenticated user |
+| `/accounts` | AccountsPage | Any authenticated user |
+| `/admin` | AdminPage | Admin role only — members redirected |
+| `/sso-callback` | Clerk callback handler | Clerk SDK, not our code |
+
+---
+
+### Page: /tasks
+
+```
+TasksPage
+  ├── TaskToolbar
+  │     ├── SearchInput            (free text across task name, account, notes)
+  │     ├── FilterChip             (reusable — one per filter: Status, Assignee,
+  │     │                           Priority, Type, Partner)
+  │     ├── ColumnManager          (popover panel — show/hide/reorder columns)
+  │     └── NewTaskButton          (opens NewTaskModal)
+  │
+  ├── TaskTable
+  │     ├── TaskGroupHeader        (account + partner label, task count, collapse toggle)
+  │     └── TaskRow                (one per task, clickable → opens TaskSidePanel)
+  │           ├── TaskNameCell     (task name in green + ⋯ context menu trigger)
+  │           │     └── ContextMenu
+  │           │           ├── ContextMenuItem  "Edit task"
+  │           │           ├── ContextMenuItem  "Duplicate"
+  │           │           ├── ContextMenuItem  "Link to account"  (partner-only tasks only)
+  │           │           └── ContextMenuItem  "Delete task"  (triggers ConfirmDialog)
+  │           ├── StatusPill       (colour-coded enum pill, inline)
+  │           ├── PriorityBadge    (colour-coded enum pill)
+  │           ├── AssigneeChip     (avatar circle + name)
+  │           └── NotesPreview     (last N notes inline, N from user preferences)
+  │
+  ├── TaskSidePanel                (slides in from right on row click)
+  │     ├── PanelHeader            (task name, StatusPill, PriorityBadge)
+  │     ├── AccountBlock           (account dropdown, partner, distributor — all editable)
+  │     │     └── SFDCLinks        (account link + task link, each opens new tab)
+  │     ├── TaskDetailBlock        (type, subtype, ETA date picker, AssigneeChip, next action)
+  │     ├── LastUpdatedLine        (updated by [user] · [timestamp])
+  │     └── NotesTimeline
+  │           ├── NoteItem         (avatar, author, timestamp, markdown content)
+  │           │     └── EditNoteForm  (inline edit — author + last-note rule enforced)
+  │           ├── LoadMoreButton   (pagination — loads next 25 notes)
+  │           └── AddNoteForm      (markdown textarea + Post button)
+  │
+  └── NewTaskModal                 (modal overlay)
+        ├── SearchableSelect       (account — type to filter)
+        ├── SearchableSelect       (task type/subtype)
+        ├── SearchableSelect       (assignee — mandatory)
+        ├── TextInput              (task name)
+        ├── TextInput              (partner name)
+        ├── TextInput              (next action)
+        ├── DatePicker             (ETA)
+        ├── SearchableSelect       (priority)
+        ├── SearchableSelect       (status)
+        └── ConfirmButton / CancelButton
+```
+
+---
+
+### Page: /accounts
+
+```
+AccountsPage
+  ├── AccountToolbar
+  │     ├── SearchInput
+  │     └── NewAccountButton       (opens NewAccountModal)
+  │
+  ├── AccountTable
+  │     └── AccountRow             (clickable → opens AccountSidePanel)
+  │
+  ├── AccountSidePanel
+  │     ├── AccountDetailBlock     (name, country, ACV, SFDC link — all editable)
+  │     └── LinkedTasksList        (tasks belonging to this account, clickable)
+  │
+  └── NewAccountModal
+        ├── TextInput              (name — required)
+        ├── TextInput              (country — required)
+        ├── TextInput              (ACV)
+        └── TextInput              (SFDC account URL)
+```
+
+---
+
+### Page: /admin
+
+```
+AdminPage                          (admin role only)
+  ├── AdminNav                     (tab strip: Task Types | Users | Audit Log)
+  │
+  ├── TaskTypesPanel
+  │     ├── TaskTypeList
+  │     │     └── TaskTypeRow      (name, category pill, active toggle)
+  │     └── NewTaskTypeForm        (inline — name + category dropdown)
+  │
+  ├── UsersPanel
+  │     └── UserList
+  │           └── UserRow          (avatar, name, email, role dropdown)
+  │
+  └── AuditLogPanel
+        ├── AuditFilterBar         (user, entity type, action, date range)
+        ├── AuditTable
+        │     └── AuditRow         (timestamp, user, entity, action, changed fields diff)
+        └── AuditPagination
+```
+
+---
+
+### Shared / reusable components
+
+```
+components/ui/
+  ├── SearchableSelect     (dropdown + type-to-filter — used in all forms and filters)
+  ├── StatusPill           (colour-coded pill for task_status enum)
+  ├── PriorityBadge        (colour-coded pill for task_priority enum)
+  ├── AssigneeChip         (initials avatar circle — green/blue only — + display name)
+  ├── DatePicker           (ETA field)
+  ├── MarkdownRenderer     (renders note content as HTML)
+  ├── MarkdownEditor       (textarea with preview toggle for note input)
+  ├── ConfirmDialog        (used for delete task warning — lists what will be deleted)
+  ├── SidePanel            (generic slide-in container — reused for tasks and accounts)
+  ├── ContextMenu          (floating menu — renders items + handles outside-click dismiss)
+  └── LoadingSpinner
+```
+
+---
+
+### State and data layer
+
+```
+hooks/
+  ├── useAuth              (current user id + role — from Clerk + /api/users)
+  ├── useTasks             (fetch list with filters/sort, optimistic status/priority updates)
+  ├── useTask              (single task detail + notes pagination)
+  ├── useAccounts          (fetch + search)
+  ├── useTaskTypes         (active types for dropdowns)
+  ├── useUsers             (all users for assignee dropdown)
+  ├── usePreferences       (column order/visibility, notes preview count — auto-saved)
+  └── useAuditLog          (admin only — paginated with filters)
+
+lib/
+  ├── apiClient.js         (fetch wrapper — attaches Clerk JWT to every request automatically)
+  └── constants.js         (column keys, status/priority enum values, colour maps)
+```
 
 ---
 

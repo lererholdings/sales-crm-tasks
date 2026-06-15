@@ -36,6 +36,6 @@ See `docs/design.md` for the full system design, data model, and implementation 
 - [x] Data model + schema
 - [x] API spec
 - [x] UI mockup (docs/mockups/main-view-v3.html)
-- [ ] Frontend component map
+- [x] Frontend component map
 - [ ] Implementation plan
 - [ ] Deployment
