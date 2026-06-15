@@ -61,15 +61,17 @@ CREATE TABLE users (
 
 -- ============================================================
 -- ACCOUNTS
--- A customer or prospect. The source of truth for country,
--- default partner/distributor/contract value.
+-- A customer or prospect.
+-- ACV changes over time (e.g. at renewal); patched in place,
+-- history preserved via audit_log.
 -- ============================================================
 
 CREATE TABLE accounts (
   id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   name              TEXT        NOT NULL,
-  country           TEXT,
-  sfdc_account_url  TEXT,                          -- opens in new tab on the client
+  country           TEXT        NOT NULL,
+  acv               NUMERIC(15,2),                -- Annual Contract Value; patchable
+  sfdc_account_url  TEXT,                         -- opens in new tab on the client
   last_updated_by   UUID        REFERENCES users(id) ON DELETE SET NULL,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -107,17 +109,19 @@ ON CONFLICT (category, name) DO NOTHING;
 -- TASKS
 -- Core work item. Linked to one account + partner combination.
 -- Multiple tasks can share the same account + partner.
+-- Soft-delete: deleted_at is set instead of removing the row.
+-- Non-admin API queries always filter WHERE deleted_at IS NULL.
 -- ============================================================
 
 CREATE TABLE tasks (
   id               UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
   task_name        TEXT            NOT NULL,
 
-  -- Account relationship (editable per task to support multi-partner scenarios)
+  -- Account relationship (partner/distributor editable per task
+  -- to support multi-partner scenarios on the same account)
   account_id       UUID            NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
   partner_name     TEXT,                          -- nullable: no partner on some tasks
   distributor_name TEXT,
-  contract_value   NUMERIC(15, 2),
 
   -- Classification
   task_type_id     UUID            REFERENCES task_types(id) ON DELETE SET NULL,
@@ -127,7 +131,7 @@ CREATE TABLE tasks (
 
   -- Execution
   next_action      TEXT,
-  assignee_id      UUID            REFERENCES users(id) ON DELETE SET NULL,
+  assignee_id      UUID            NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
 
   -- External links (open in new tab)
   sfdc_task_url    TEXT,
@@ -136,6 +140,10 @@ CREATE TABLE tasks (
   external_source  external_source NOT NULL DEFAULT 'manual',
   external_id      TEXT,                          -- Outlook message ID or SFDC task ID
   email_ref        TEXT,                          -- email message-id header
+
+  -- Soft delete
+  deleted_at       TIMESTAMPTZ,                   -- null = active
+  deleted_by       UUID            REFERENCES users(id) ON DELETE SET NULL,
 
   -- Audit fields
   last_updated_by  UUID            REFERENCES users(id) ON DELETE SET NULL,
@@ -150,11 +158,14 @@ CREATE INDEX idx_tasks_status        ON tasks(status);
 CREATE INDEX idx_tasks_priority      ON tasks(priority);
 CREATE INDEX idx_tasks_eta           ON tasks(eta);
 CREATE INDEX idx_tasks_task_type_id  ON tasks(task_type_id);
+CREATE INDEX idx_tasks_deleted_at    ON tasks(deleted_at);  -- fast active-only filter
 
 -- ============================================================
 -- TASK NOTES
 -- Append-only timestamped log of notes per task.
--- Editing a note updates content + edited_at (optional).
+-- Edit rules: only the original author may edit their note,
+-- and only if no newer note exists on the same task.
+-- Soft-delete mirrors tasks: cascade when parent task deleted.
 -- ============================================================
 
 CREATE TABLE task_notes (
@@ -164,10 +175,16 @@ CREATE TABLE task_notes (
   content          TEXT        NOT NULL,           -- markdown supported
   last_updated_by  UUID        REFERENCES users(id) ON DELETE SET NULL,
   edited_at        TIMESTAMPTZ,                    -- null = never edited
+
+  -- Soft delete (cascades from parent task deletion)
+  deleted_at       TIMESTAMPTZ,                   -- null = active
+  deleted_by       UUID        REFERENCES users(id) ON DELETE SET NULL,
+
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_task_notes_task_id ON task_notes(task_id);
+CREATE INDEX idx_task_notes_task_id    ON task_notes(task_id);
+CREATE INDEX idx_task_notes_deleted_at ON task_notes(deleted_at);
 
 -- ============================================================
 -- USER PREFERENCES
@@ -178,7 +195,7 @@ CREATE TABLE user_preferences (
   user_id              UUID    PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   column_order         JSONB   NOT NULL DEFAULT '[]',   -- ordered list of column keys
   column_visibility    JSONB   NOT NULL DEFAULT '{}',   -- { column_key: true/false }
-  notes_preview_count  INT     NOT NULL DEFAULT 2       -- how many notes shown inline
+  notes_preview_count  INT     NOT NULL DEFAULT 2       -- how many notes shown in inline preview
 );
 
 -- ============================================================

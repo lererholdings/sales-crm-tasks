@@ -32,7 +32,7 @@ See `docs/design.md` for the full system design, data model, and implementation 
 
 - [x] System design
 - [x] Data model + schema
-- [ ] API spec
+- [x] API spec
 - [ ] Frontend component map
 - [ ] Implementation
-- [ ] Deployment
+- [ ] Deployments
