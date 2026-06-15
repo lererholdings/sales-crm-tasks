@@ -16,7 +16,7 @@
 6. [UI design](#6-ui-design)
 7. [API design](#7-api-design)
 8. [Frontend components](#8-frontend-components)
-9. [Implementation plan](#9-implementation-plan) ← to be completed
+9. [Implementation plan](#9-implementation-plan)
 10. [Deployment guide](#10-deployment-guide) ← to be completed
 11. [Future features](#11-future-features)
 12. [Design decisions log](#12-design-decisions-log)
@@ -932,7 +932,249 @@ lib/
 
 ## 9. Implementation plan
 
-_To be completed in next design session._
+### Guiding principles
+
+- Ship something usable as early as possible — core task table before filters, admin, or audit
+- Each milestone ends with a working, deployable state — never leave the app broken between sessions
+- Build backend before frontend for each feature — data layer first, UI second
+- Test each API endpoint manually (Postman or curl) before building UI on top of it
+- Be mindful about Security, Authentication, and Authorization during the implementation
+
+---
+
+### Milestone 1 — Project scaffold and infrastructure
+_Goal: empty app deployed live with auth working_
+
+**Tasks:**
+1. Scaffold React + Vite frontend in `frontend/`
+2. Configure Tailwind CSS with emerald/green theme tokens matching the mockup
+3. Set up Vercel project connected to the GitHub repo (`lererholdings/sales-crm-tasks`)
+4. Create Supabase project — copy connection string
+5. Run `db/schema.sql` in Supabase SQL editor — verify all tables created
+6. Create Clerk application — configure allowed origins, copy keys
+7. Add environment variables to Vercel: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `CLERK_SECRET_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`
+8. Scaffold `api/` folder with one test endpoint `GET /api/health → { ok: true }`
+9. Wire Clerk `<ClerkProvider>` into the React app
+10. Add `ProtectedRoute` — unauthenticated users redirect to Clerk hosted login
+11. Deploy to Vercel — verify login flow works end to end
+
+**Checkpoint ✅**
+- App loads at Vercel URL
+- Unauthenticated visit redirects to Clerk login
+- After login, user sees a blank page (no content yet — that's fine)
+- `GET /api/health` returns `{ ok: true }`
+- All tables exist in Supabase
+
+---
+
+### Milestone 2 — Auth middleware and user sync
+_Goal: every API call knows who the user is and what role they have_
+
+**Tasks:**
+1. Build `validateSession` middleware — verifies Clerk JWT, resolves `clerk_user_id` → internal `users` row, attaches `{ id, role }` to request context
+2. Build user auto-provisioning — if Clerk user has no row in `users` table yet, create one on first login (display name + email from Clerk token)
+3. `GET /api/users` — list all users (used for assignee dropdowns)
+4. `PATCH /api/users/:id` — update role (admin only)
+5. Seed one admin user manually in Supabase (your own account)
+6. Add `lib/apiClient.js` to frontend — fetch wrapper that attaches Clerk JWT to every request
+
+**Checkpoint ✅**
+- Login creates a user row in Supabase automatically
+- `GET /api/users` returns the user list with roles
+- Non-admin cannot change roles (403 returned)
+- All subsequent API calls will have user context available
+
+---
+
+### Milestone 3 — Accounts API and UI
+_Goal: create and view accounts_
+
+**Tasks:**
+1. `GET /api/accounts` — list with optional `search` and `?include=acv`
+2. `POST /api/accounts` — create account
+3. `GET /api/accounts/:id` — get single account with ACV
+4. `PATCH /api/accounts/:id` — update including ACV (audit logged)
+5. Build `AccountsPage` with `AccountTable` and `AccountRow`
+6. Build `AccountSidePanel` — view and edit account details
+7. Build `NewAccountModal` — create account form with `SearchableSelect` and `TextInput` components
+8. Wire `useAccounts` hook to API
+
+**Checkpoint ✅**
+- Can create an account with name, country, ACV, SFDC link
+- Accounts list and search works
+- Can edit an account — ACV change visible in Supabase audit_log
+
+---
+
+### Milestone 4 — Tasks API
+_Goal: full task CRUD available, testable via Postman_
+
+**Tasks:**
+1. `GET /api/tasks` — list with all filter/sort params, notes inline (default 2), soft-delete filter
+2. `POST /api/tasks` — create with validation (task_name, account_id nullable, assignee_id required)
+3. `GET /api/tasks/:id` — single task with paginated notes
+4. `PATCH /api/tasks/:id` — update any field
+5. `DELETE /api/tasks/:id` — soft delete task + cascade soft delete notes + audit both
+6. `GET /api/task-types` — list (active only for members, all for admin)
+7. Build audit middleware — wraps all mutating endpoints, writes to `audit_log` automatically
+8. Wire `useTaskTypes` hook
+
+**Checkpoint ✅**
+- Full task lifecycle works via API: create → read → update → soft delete
+- Deleted tasks invisible to members, visible to admins via `?include_deleted=true`
+- Audit log has entries for every mutation
+- Task types seed data visible via `GET /api/task-types`
+
+---
+
+### Milestone 5 — Core task UI
+_Goal: the main working view — task table with grouping and side panel_
+
+**Tasks:**
+1. Build `TaskTable` with `TaskGroupHeader` and `TaskRow`
+   - Group rows by account + partner using the three labelling rules
+   - Render `StatusPill`, `PriorityBadge`, `AssigneeChip`, `NotesPreview` components
+2. Build `TaskNameCell` with `ContextMenu` (Edit, Duplicate, Delete, Link to account for partner-only)
+3. Build `ConfirmDialog` — used for delete confirmation
+4. Build `TaskSidePanel`
+   - `AccountBlock` (editable dropdowns, SFDC links open in new tab)
+   - `TaskDetailBlock` (type, subtype, ETA, assignee, next action)
+   - `LastUpdatedLine`
+5. Build `NotesTimeline`
+   - `NoteItem` with `MarkdownRenderer`
+   - `EditNoteForm` (author + last-note rule enforced client and server side)
+   - `LoadMoreButton` (pagination — loads next 25)
+   - `AddNoteForm` with `MarkdownEditor`
+6. Notes API endpoints:
+   - `GET /api/tasks/:id/notes` (preview mode + paginated mode)
+   - `POST /api/tasks/:id/notes`
+   - `PATCH /api/tasks/:id/notes/:noteId` (permission checks server-side)
+7. Wire `useTasks` and `useTask` hooks
+8. Build `NewTaskModal` with all `SearchableSelect` fields — account auto-populates partner/distributor on selection
+
+**Checkpoint ✅**
+- Task table loads and groups correctly by account + partner
+- All three group label rules render correctly
+- Clicking a row opens the side panel with full detail
+- Notes timeline loads, paginates, and new notes can be added
+- Note edit respects author + last-note rule
+- New task can be created via modal — appears in table immediately
+- Soft delete via context menu shows confirm dialog, removes from view
+
+---
+
+### Milestone 6 — Filters, sorting, and column preferences
+_Goal: the toolbar is fully functional_
+
+**Tasks:**
+1. Build `FilterChip` components — Status, Assignee, Priority, Type, Partner
+2. Wire filter state to `GET /api/tasks` query params
+3. Build `SearchInput` — debounced free text search
+4. Build `ColumnManager` popover — show/hide columns, drag to reorder
+5. `GET /api/preferences` and `PATCH /api/preferences` endpoints
+6. Wire `usePreferences` hook — column state persists to DB on change
+7. Apply sort on column header click (sort_by + sort_dir params)
+
+**Checkpoint ✅**
+- Filtering by status, assignee, priority, type, partner all work
+- Free text search filters the table in real time
+- Column show/hide and reorder persists across browser refresh and devices
+- Sorting by any column works
+
+---
+
+### Milestone 7 — Dark mode
+_Goal: theme toggle working in the real app, matching the mockup_
+
+**Tasks:**
+1. Define CSS custom properties for all theme tokens (light + dark) in global stylesheet — matching the mockup colour values exactly
+2. Implement `data-theme` toggle on `<html>` element
+3. Add round icon-only theme toggle button to `Navbar` (moon / sun)
+4. Persist theme preference to `user_preferences` table (add `theme` field)
+5. Respect OS `prefers-color-scheme` on first load if no saved preference
+
+**Checkpoint ✅**
+- Toggle switches between light and dark instantly
+- Theme persists across sessions and devices
+- OS dark mode preference respected on first visit
+
+---
+
+### Milestone 8 — Admin panel
+_Goal: task types, user management, audit log viewer_
+
+**Tasks:**
+1. Build `AdminPage` with tab navigation
+2. `TaskTypesPanel` — list, add, rename, activate/deactivate subtypes
+   - `POST /api/task-types` and `PATCH /api/task-types/:id` endpoints
+3. `UsersPanel` — list users, change roles
+4. `AuditLogPanel` — paginated table with filter bar
+   - `GET /api/audit-log` endpoint (admin only, with all filter params)
+5. Add role guard to `AdminPage` — redirect members to `/tasks`
+
+**Checkpoint ✅**
+- Admin can add a new task subtype — appears in task creation dropdown immediately
+- Admin can change a user's role
+- Audit log shows all changes with user, timestamp, and diff
+- Member visiting `/admin` is redirected
+
+---
+
+### Milestone 9 — Hardening and edge cases
+_Goal: production-ready error handling and edge case coverage_
+
+**Tasks:**
+1. API error handling — consistent error response shape `{ error: string, code: string }` across all endpoints
+2. Frontend error states — empty states, loading spinners, failed fetch messages
+3. Form validation feedback — inline errors on required fields
+4. Handle partner-only task flow end to end — "Link to account" context menu opens account selector, PATCH updates task
+5. Session expiry handling — Clerk token refresh on 401, redirect to login if session truly expired
+6. Rate limiting on API routes (Vercel edge config)
+7. Input sanitisation on all text fields
+8. Smoke test all endpoints and UI flows end to end
+
+**Checkpoint ✅**
+- No unhandled errors visible to users — all failures show a friendly message
+- Partner-only → link to account flow works end to end
+- Session expiry redirects cleanly to login then back to original page
+- All forms validate and show inline errors
+
+---
+
+### Milestone 10 — Deployment and go-live
+_See Section 10: Deployment guide (to be completed)_
+
+**Tasks:**
+1. Configure custom domain (optional)
+2. Set production environment variables in Vercel
+3. Final end-to-end test with all 5 users
+4. Brief all users on login flow and basic usage
+
+**Checkpoint ✅**
+- All 5 users can log in and create/update tasks
+- App is stable under normal usage
+- Audit log is capturing activity
+
+---
+
+### Summary timeline
+
+| Milestone | What you get | Effort estimate |
+|---|---|---|
+| 1 — Scaffold | Live empty app with auth | 2–3 hours |
+| 2 — Auth middleware | Secure API, user sync | 1–2 hours |
+| 3 — Accounts | Full account management | 2–3 hours |
+| 4 — Tasks API | Full task CRUD (no UI) | 3–4 hours |
+| 5 — Core task UI | **Usable app** — table, panel, notes | 6–8 hours |
+| 6 — Filters + columns | Full toolbar functionality | 3–4 hours |
+| 7 — Dark mode | Theme toggle | 1–2 hours |
+| 8 — Admin panel | Task types, users, audit log | 3–4 hours |
+| 9 — Hardening | Production-ready | 2–3 hours |
+| 10 — Go-live | Live for all 5 users | 1 hour |
+
+**Total estimate: 24–34 hours of Claude Code sessions.**
+
+These are active working hours — not elapsed time. You can pause between any milestone and the app will be in a stable, deployable state.
 
 ---
 
