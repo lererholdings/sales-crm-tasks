@@ -1,0 +1,227 @@
+-- ============================================================
+-- Sales CRM — Postgres DDL
+-- Target: Supabase (plain Postgres, no proprietary features)
+-- ============================================================
+
+-- Extensions
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";   -- gen_random_uuid()
+
+-- ============================================================
+-- ENUMS
+-- ============================================================
+
+CREATE TYPE user_role AS ENUM ('admin', 'member');
+
+CREATE TYPE task_status AS ENUM (
+  'backlog',
+  'in_progress',
+  'waiting',
+  'done'
+);
+
+CREATE TYPE task_priority AS ENUM (
+  'critical',
+  'high',
+  'medium',
+  'low'
+);
+
+CREATE TYPE task_category AS ENUM (
+  'pre-sale',
+  'post-sale',
+  'account'
+);
+
+CREATE TYPE audit_action AS ENUM (
+  'created',
+  'updated',
+  'deleted',
+  'viewed'
+);
+
+CREATE TYPE external_source AS ENUM (
+  'manual',
+  'outlook',
+  'sfdc'
+);
+
+-- ============================================================
+-- USERS
+-- Clerk handles auth — we store only the reference ID.
+-- ============================================================
+
+CREATE TABLE users (
+  id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  clerk_user_id    TEXT        UNIQUE NOT NULL,
+  display_name     TEXT        NOT NULL,
+  email            TEXT        UNIQUE NOT NULL,
+  role             user_role   NOT NULL DEFAULT 'member',
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- ACCOUNTS
+-- A customer or prospect. The source of truth for country,
+-- default partner/distributor/contract value.
+-- ============================================================
+
+CREATE TABLE accounts (
+  id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  name              TEXT        NOT NULL,
+  country           TEXT,
+  sfdc_account_url  TEXT,                          -- opens in new tab on the client
+  last_updated_by   UUID        REFERENCES users(id) ON DELETE SET NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- TASK TYPES
+-- Admin-configurable list of subtypes per category.
+-- ============================================================
+
+CREATE TABLE task_types (
+  id          UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  category    task_category NOT NULL,
+  name        TEXT          NOT NULL,
+  active      BOOLEAN       NOT NULL DEFAULT true,
+  UNIQUE (category, name)
+);
+
+-- Seed — safe to re-run (INSERT ... ON CONFLICT DO NOTHING)
+INSERT INTO task_types (category, name) VALUES
+  ('pre-sale',  'Demo'),
+  ('pre-sale',  'POC'),
+  ('pre-sale',  'RFI'),
+  ('pre-sale',  'RFP'),
+  ('pre-sale',  'Follow-up'),
+  ('post-sale', 'Support ticket follow-up'),
+  ('post-sale', 'Technical session'),
+  ('post-sale', 'Best practice advice'),
+  ('post-sale', 'Focus demo'),
+  ('account',   'Quote / renewal'),
+  ('account',   'New contract')
+ON CONFLICT (category, name) DO NOTHING;
+
+-- ============================================================
+-- TASKS
+-- Core work item. Linked to one account + partner combination.
+-- Multiple tasks can share the same account + partner.
+-- ============================================================
+
+CREATE TABLE tasks (
+  id               UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_name        TEXT            NOT NULL,
+
+  -- Account relationship (editable per task to support multi-partner scenarios)
+  account_id       UUID            NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+  partner_name     TEXT,                          -- nullable: no partner on some tasks
+  distributor_name TEXT,
+  contract_value   NUMERIC(15, 2),
+
+  -- Classification
+  task_type_id     UUID            REFERENCES task_types(id) ON DELETE SET NULL,
+  status           task_status     NOT NULL DEFAULT 'backlog',
+  priority         task_priority   NOT NULL DEFAULT 'medium',
+  eta              DATE,
+
+  -- Execution
+  next_action      TEXT,
+  assignee_id      UUID            REFERENCES users(id) ON DELETE SET NULL,
+
+  -- External links (open in new tab)
+  sfdc_task_url    TEXT,
+
+  -- Future: Outlook plugin / SFDC integration hooks
+  external_source  external_source NOT NULL DEFAULT 'manual',
+  external_id      TEXT,                          -- Outlook message ID or SFDC task ID
+  email_ref        TEXT,                          -- email message-id header
+
+  -- Audit fields
+  last_updated_by  UUID            REFERENCES users(id) ON DELETE SET NULL,
+  created_at       TIMESTAMPTZ     NOT NULL DEFAULT now(),
+  updated_at       TIMESTAMPTZ     NOT NULL DEFAULT now()
+);
+
+-- Indexes for the main filter/sort operations
+CREATE INDEX idx_tasks_account_id    ON tasks(account_id);
+CREATE INDEX idx_tasks_assignee_id   ON tasks(assignee_id);
+CREATE INDEX idx_tasks_status        ON tasks(status);
+CREATE INDEX idx_tasks_priority      ON tasks(priority);
+CREATE INDEX idx_tasks_eta           ON tasks(eta);
+CREATE INDEX idx_tasks_task_type_id  ON tasks(task_type_id);
+
+-- ============================================================
+-- TASK NOTES
+-- Append-only timestamped log of notes per task.
+-- Editing a note updates content + edited_at (optional).
+-- ============================================================
+
+CREATE TABLE task_notes (
+  id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id          UUID        NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id          UUID        REFERENCES users(id) ON DELETE SET NULL,
+  content          TEXT        NOT NULL,           -- markdown supported
+  last_updated_by  UUID        REFERENCES users(id) ON DELETE SET NULL,
+  edited_at        TIMESTAMPTZ,                    -- null = never edited
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_task_notes_task_id ON task_notes(task_id);
+
+-- ============================================================
+-- USER PREFERENCES
+-- Per-user column layout and notes display settings.
+-- ============================================================
+
+CREATE TABLE user_preferences (
+  user_id              UUID    PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  column_order         JSONB   NOT NULL DEFAULT '[]',   -- ordered list of column keys
+  column_visibility    JSONB   NOT NULL DEFAULT '{}',   -- { column_key: true/false }
+  notes_preview_count  INT     NOT NULL DEFAULT 2       -- how many notes shown inline
+);
+
+-- ============================================================
+-- AUDIT LOG
+-- Immutable record of all changes and view events.
+-- Visible to admin role only (enforced at API layer).
+-- ============================================================
+
+CREATE TABLE audit_log (
+  id             UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  entity_type    TEXT          NOT NULL,           -- 'task' | 'account' | 'task_note' | 'task_type' | 'user'
+  entity_id      UUID          NOT NULL,
+  user_id        UUID          REFERENCES users(id) ON DELETE SET NULL,
+  action         audit_action  NOT NULL,
+  changed_fields JSONB,                            -- { field: { from: x, to: y } } — null for 'viewed'
+  timestamp      TIMESTAMPTZ   NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_audit_log_entity    ON audit_log(entity_type, entity_id);
+CREATE INDEX idx_audit_log_user_id   ON audit_log(user_id);
+CREATE INDEX idx_audit_log_timestamp ON audit_log(timestamp DESC);
+
+-- ============================================================
+-- AUTO-UPDATE updated_at
+-- Trigger keeps updated_at current on any row change.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_tasks_updated_at
+  BEFORE UPDATE ON tasks
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_accounts_updated_at
+  BEFORE UPDATE ON accounts
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ============================================================
+-- END OF SCHEMA
+-- ============================================================
