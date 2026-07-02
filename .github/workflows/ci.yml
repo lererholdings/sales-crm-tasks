@@ -35,3 +35,76 @@ jobs:
 
       - name: Build frontend
         run: npm --prefix frontend run build
+
+  verify-preview-deployment:
+    name: Verify live preview deployment
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install root dependencies
+        run: npm install
+
+      # Vercel preview URLs follow https://<project>-git-<branch>-<scope>.vercel.app
+      # for branch names that are already lowercase/hyphenated (our convention).
+      # If that ever stops matching, switch to polling the GitHub Deployments
+      # API for this commit's deployment_status instead of guessing the URL.
+      - name: Wait for the preview deployment to be live
+        id: preview
+        run: |
+          BRANCH_SLUG=$(echo "${{ github.head_ref || github.ref_name }}" | tr '[:upper:]_' '[:lower:]-' | tr -cd 'a-z0-9-')
+          URL="https://sales-crm-tasks-git-${BRANCH_SLUG}-lerers-projects.vercel.app"
+          echo "Polling $URL"
+          for i in $(seq 1 30); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "x-vercel-protection-bypass: ${{ secrets.VERCEL_PROTECTION_BYPASS_SECRET }}" "$URL/api/health")
+            if [ "$CODE" = "200" ]; then
+              echo "url=$URL" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for the preview deployment to respond"
+          exit 1
+
+      # Real HTTP against the actually-deployed function — catches things
+      # the in-process integration tests can't (env var scoping, routing,
+      # vercel.json misconfig, cold-start issues). Uses the SAME test auth
+      # bypass, so TEST_AUTH_BYPASS_SECRET must also be set in Vercel's
+      # Preview environment (never Production) for this to pass.
+      - name: Smoke test the live preview
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          VERCEL_PROTECTION_BYPASS_SECRET: ${{ secrets.VERCEL_PROTECTION_BYPASS_SECRET }}
+          TEST_AUTH_BYPASS_SECRET: ${{ secrets.TEST_AUTH_BYPASS_SECRET }}
+        run: |
+          set -e
+          TEST_ID="test_ci_preview_${{ github.run_id }}"
+
+          CODE=$(curl -s -o /tmp/users.json -w "%{http_code}" \
+            -H "x-vercel-protection-bypass: $VERCEL_PROTECTION_BYPASS_SECRET" \
+            -H "x-test-bypass-secret: $TEST_AUTH_BYPASS_SECRET" \
+            -H "x-test-clerk-user-id: $TEST_ID" \
+            -H "x-test-email: ${TEST_ID}@test.invalid" \
+            "$PREVIEW_URL/api/users")
+          echo "GET /api/users -> $CODE"
+          cat /tmp/users.json
+          [ "$CODE" = "200" ]
+          grep -q "${TEST_ID}@test.invalid" /tmp/users.json
+
+      - name: Clean up the test user created against the preview deployment
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          node -e "
+          import('./api/_lib/db.js').then(async ({ query }) => {
+            await query(\"DELETE FROM users WHERE clerk_user_id LIKE 'test_ci_preview_%'\");
+            process.exit(0);
+          }).catch((e) => { console.error(e); process.exit(1); });
+          "

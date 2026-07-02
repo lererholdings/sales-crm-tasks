@@ -56,10 +56,11 @@ To make a schema change, add a new file to `supabase/migrations/` (timestamp-pre
 
 ## Testing
 
-Two tiers, both run in CI:
+Three tiers, all run in CI on every push (the third only for non-`main` branches):
 
 - **Unit tests** (`npm test`, `npm --prefix frontend run test`) — everything external (DB, Clerk) is mocked. Fast, no secrets needed, safe for anyone to run.
-- **Integration tests** (`npm run test:integration`) — run the real `api/` handlers against the real dev database, authenticated via the test bypass (see `docs/design.md` section 12, "Test auth bypass") instead of a real Clerk login. Requires `DATABASE_URL` (dev project) and `TEST_AUTH_BYPASS_SECRET` to be set. Test rows use a `test_ci_*` `clerk_user_id` prefix and are cleaned up after each run.
+- **Integration tests** (`npm run test:integration`) — run the real `api/` handlers *in-process* against the real dev database, authenticated via the test bypass (see `docs/design.md` section 12, "Test auth bypass") instead of a real Clerk login. Requires `DATABASE_URL` (dev project) and `TEST_AUTH_BYPASS_SECRET`. Test rows use a `test_ci_*` `clerk_user_id` prefix and are cleaned up after each run.
+- **Live preview verification** (CI job `verify-preview-deployment`) — waits for the actual Vercel Preview deployment to come up, then hits it over real HTTP with the Vercel protection bypass header + the test auth bypass header. This is the only tier that proves the *deployed* app works, not just the code — catches env var scoping mistakes, routing issues, etc. Requires `TEST_AUTH_BYPASS_SECRET` to also be set in Vercel's **Preview** environment (never Production — see design.md section 12).
 
 To run integration tests locally, both vars need to be in your shell environment (not just `.env.local` — vitest doesn't auto-load it the way Vite does for the frontend):
 
