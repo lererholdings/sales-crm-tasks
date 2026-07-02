@@ -1,11 +1,6 @@
 -- ============================================================
 -- Sales CRM — Postgres DDL
 -- Target: Supabase (plain Postgres, no proprietary features)
---
--- This is a flattened reference copy for quick reading.
--- The applied source of truth is supabase/migrations/ — run
--- `npx supabase db push` to deploy. New schema changes go in a
--- new migration file, not edited here.
 -- ============================================================
 
 -- Extensions

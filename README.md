@@ -21,10 +21,24 @@ sales-crm-tasks/
     mockups/
       main-view-v3.html  ← final approved UI mockup (open in browser)
   db/
-    schema.sql       ← Postgres DDL (run once in Supabase SQL editor)
-  frontend/          ← React app (to be scaffolded)
-  api/               ← Vercel serverless functions (to be scaffolded)
+    schema.sql       ← flattened reference copy of the schema (not the applied source)
+  supabase/
+    migrations/       ← Supabase CLI migrations — the applied source of truth
+  frontend/          ← React app
+  api/               ← Vercel serverless functions
 ```
+
+## Database migrations
+
+Schema changes are deployed via the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started):
+
+```
+npx supabase login                          # one-time, opens browser
+npx supabase link --project-ref <ref>       # one-time, links this repo to your Supabase project
+npx supabase db push                        # applies any pending migrations in supabase/migrations/
+```
+
+To make a schema change, add a new file to `supabase/migrations/` (timestamp-prefixed, e.g. `npx supabase migration new <name>`) rather than editing existing migrations.
 
 ## Getting started
 

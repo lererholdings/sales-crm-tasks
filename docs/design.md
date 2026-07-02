@@ -235,7 +235,7 @@ tasks
 
 ### Database file
 
-See `db/schema.sql` for the complete production-ready DDL including triggers, indexes, and seed data.
+Schema is managed as Supabase CLI migrations in `supabase/migrations/`. Deploy with `npx supabase db push` (see Milestone 1). `db/schema.sql` is kept as a flattened human-readable copy of the current cumulative schema — not the applied source.
 
 ---
 
@@ -939,6 +939,7 @@ lib/
 - Build backend before frontend for each feature — data layer first, UI second
 - Test each API endpoint manually (Postman or curl) before building UI on top of it
 - Be mindful about Security, Authentication, and Authorization during the implementation
+- Every milestone adds automated tests for what it built that milestone (Vitest — `api/**/*.test.js` for endpoints, `frontend/src/**/__tests__` for components). A GitHub Actions workflow (`.github/workflows/ci.yml`) runs the full suite plus a production build on every push. Milestone 9 revalidates everything end to end and fills any coverage gaps.
 
 ---
 
@@ -950,13 +951,14 @@ _Goal: empty app deployed live with auth working_
 2. Configure Tailwind CSS with emerald/green theme tokens matching the mockup
 3. Set up Vercel project connected to the GitHub repo (`lererholdings/sales-crm-tasks`)
 4. Create Supabase project — copy connection string
-5. Run `db/schema.sql` in Supabase SQL editor — verify all tables created
+5. `npx supabase login`, then `npx supabase link --project-ref <ref>` and `npx supabase db push` to deploy `supabase/migrations/` — verify all tables created
 6. Create Clerk application — configure allowed origins, copy keys
 7. Add environment variables to Vercel: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `CLERK_SECRET_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`
 8. Scaffold `api/` folder with one test endpoint `GET /api/health → { ok: true }`
 9. Wire Clerk `<ClerkProvider>` into the React app
 10. Add `ProtectedRoute` — unauthenticated users redirect to Clerk hosted login
 11. Deploy to Vercel — verify login flow works end to end
+12. Add Vitest to both `api/` and `frontend/`; smoke tests for this milestone: `api/health.test.js`, render tests for the placeholder pages. Add `.github/workflows/ci.yml` — installs, builds frontend, runs both test suites on every push
 
 **Checkpoint ✅**
 - App loads at Vercel URL
@@ -964,6 +966,7 @@ _Goal: empty app deployed live with auth working_
 - After login, user sees a blank page (no content yet — that's fine)
 - `GET /api/health` returns `{ ok: true }`
 - All tables exist in Supabase
+- CI is green on push
 
 ---
 
@@ -977,12 +980,14 @@ _Goal: every API call knows who the user is and what role they have_
 4. `PATCH /api/users/:id` — update role (admin only)
 5. Seed one admin user manually in Supabase (your own account)
 6. Add `lib/apiClient.js` to frontend — fetch wrapper that attaches Clerk JWT to every request
+7. Tests: `validateSession` middleware (valid / missing / expired / malformed token), user auto-provisioning (first login creates a row, second login doesn't duplicate), `PATCH /api/users/:id` 403s for non-admin
 
 **Checkpoint ✅**
 - Login creates a user row in Supabase automatically
 - `GET /api/users` returns the user list with roles
 - Non-admin cannot change roles (403 returned)
 - All subsequent API calls will have user context available
+- CI is green
 
 ---
 
@@ -998,11 +1003,13 @@ _Goal: create and view accounts_
 6. Build `AccountSidePanel` — view and edit account details
 7. Build `NewAccountModal` — create account form with `SearchableSelect` and `TextInput` components
 8. Wire `useAccounts` hook to API
+9. Tests: accounts endpoints (create, list + search, get single with ACV, patch writes audit_log entry with `{from, to}`), render test for `AccountTable`/`AccountRow` with mocked data
 
 **Checkpoint ✅**
 - Can create an account with name, country, ACV, SFDC link
 - Accounts list and search works
 - Can edit an account — ACV change visible in Supabase audit_log
+- CI is green
 
 ---
 
@@ -1018,12 +1025,14 @@ _Goal: full task CRUD available, testable via Postman_
 6. `GET /api/task-types` — list (active only for members, all for admin)
 7. Build audit middleware — wraps all mutating endpoints, writes to `audit_log` automatically
 8. Wire `useTaskTypes` hook
+9. Tests: full CRUD lifecycle, validation (missing `task_name`/`assignee_id`/`task_type_id` rejected, nullable `account_id` accepted), soft-delete filtering (hidden from members, visible to admins with `?include_deleted=true`), audit middleware writes an entry per mutation
 
 **Checkpoint ✅**
 - Full task lifecycle works via API: create → read → update → soft delete
 - Deleted tasks invisible to members, visible to admins via `?include_deleted=true`
 - Audit log has entries for every mutation
 - Task types seed data visible via `GET /api/task-types`
+- CI is green
 
 ---
 
@@ -1051,6 +1060,7 @@ _Goal: the main working view — task table with grouping and side panel_
    - `PATCH /api/tasks/:id/notes/:noteId` (permission checks server-side)
 7. Wire `useTasks` and `useTask` hooks
 8. Build `NewTaskModal` with all `SearchableSelect` fields — account auto-populates partner/distributor on selection
+9. Tests: notes endpoints — the author + last-note edit rule is the trickiest logic in the spec, cover it directly (author can edit their own latest note; author blocked once a newer note exists; non-author always blocked), preview vs paginated note modes, grouping logic for the three group-label rules, `TaskRow`/`TaskGroupHeader` render tests
 
 **Checkpoint ✅**
 - Task table loads and groups correctly by account + partner
@@ -1060,6 +1070,7 @@ _Goal: the main working view — task table with grouping and side panel_
 - Note edit respects author + last-note rule
 - New task can be created via modal — appears in table immediately
 - Soft delete via context menu shows confirm dialog, removes from view
+- CI is green
 
 ---
 
@@ -1074,12 +1085,14 @@ _Goal: the toolbar is fully functional_
 5. `GET /api/preferences` and `PATCH /api/preferences` endpoints
 6. Wire `usePreferences` hook — column state persists to DB on change
 7. Apply sort on column header click (sort_by + sort_dir params)
+8. Tests: `GET /api/tasks` filter param combinations (status, assignee, priority, type, partner, search, sort_by/sort_dir), preferences endpoints (partial-update semantics), `ColumnManager` reorder/toggle interaction test
 
 **Checkpoint ✅**
 - Filtering by status, assignee, priority, type, partner all work
 - Free text search filters the table in real time
 - Column show/hide and reorder persists across browser refresh and devices
 - Sorting by any column works
+- CI is green
 
 ---
 
@@ -1090,13 +1103,15 @@ _Goal: theme toggle working in the real app, matching the mockup_
 1. Define CSS custom properties for all theme tokens (light + dark) in global stylesheet — matching the mockup colour values exactly
 2. Implement `data-theme` toggle on `<html>` element
 3. Add round icon-only theme toggle button to `Navbar` (moon / sun)
-4. Persist theme preference to `user_preferences` table (add `theme` field)
+4. Persist theme preference to `user_preferences` table (add `theme` field — new migration in `supabase/migrations/`)
 5. Respect OS `prefers-color-scheme` on first load if no saved preference
+6. Tests: migration adds the column without breaking existing rows (default), toggle updates `data-theme` and fires the `PATCH /api/preferences` call, first-load fallback to OS preference when no saved theme exists
 
 **Checkpoint ✅**
 - Toggle switches between light and dark instantly
 - Theme persists across sessions and devices
 - OS dark mode preference respected on first visit
+- CI is green
 
 ---
 
@@ -1111,17 +1126,19 @@ _Goal: task types, user management, audit log viewer_
 4. `AuditLogPanel` — paginated table with filter bar
    - `GET /api/audit-log` endpoint (admin only, with all filter params)
 5. Add role guard to `AdminPage` — redirect members to `/tasks`
+6. Tests: task-types endpoints admin-only enforcement (403 for members), audit-log endpoint 403 for non-admins + filter param combinations, `AdminPage` role guard redirects a member user
 
 **Checkpoint ✅**
 - Admin can add a new task subtype — appears in task creation dropdown immediately
 - Admin can change a user's role
 - Audit log shows all changes with user, timestamp, and diff
 - Member visiting `/admin` is redirected
+- CI is green
 
 ---
 
 ### Milestone 9 — Hardening and edge cases
-_Goal: production-ready error handling and edge case coverage_
+_Goal: production-ready error handling, edge case coverage, and full test revalidation_
 
 **Tasks:**
 1. API error handling — consistent error response shape `{ error: string, code: string }` across all endpoints
@@ -1131,13 +1148,16 @@ _Goal: production-ready error handling and edge case coverage_
 5. Session expiry handling — Clerk token refresh on 401, redirect to login if session truly expired
 6. Rate limiting on API routes (Vercel edge config)
 7. Input sanitisation on all text fields
-8. Smoke test all endpoints and UI flows end to end
+8. **Full regression pass:** re-run every test added in Milestones 1–8 against the current codebase — nothing added since should have silently broken earlier behavior. Fix any drift before adding new coverage.
+9. **Gap audit:** go endpoint by endpoint and component by component against `docs/design.md` section 7 (API design) and section 8 (Frontend components) and confirm each has at least one test. Add tests for anything found untested — expect this to surface gaps around the new error-handling shape, rate limiting, and input sanitisation added in tasks 1–7 above, since those didn't exist when earlier milestones were tested.
+10. End-to-end smoke test of all API endpoints and UI flows against a deployed preview
 
 **Checkpoint ✅**
 - No unhandled errors visible to users — all failures show a friendly message
 - Partner-only → link to account flow works end to end
 - Session expiry redirects cleanly to login then back to original page
 - All forms validate and show inline errors
+- Full test suite (all milestones) passes in CI with no known gaps against the design doc
 
 ---
 
@@ -1147,13 +1167,15 @@ _See Section 10: Deployment guide (to be completed)_
 **Tasks:**
 1. Configure custom domain (optional)
 2. Set production environment variables in Vercel
-3. Final end-to-end test with all 5 users
-4. Brief all users on login flow and basic usage
+3. Confirm CI is green on `main` before announcing go-live
+4. Final end-to-end test with all 5 users
+5. Brief all users on login flow and basic usage
 
 **Checkpoint ✅**
 - All 5 users can log in and create/update tasks
 - App is stable under normal usage
 - Audit log is capturing activity
+- CI is green on `main`
 
 ---
 
