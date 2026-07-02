@@ -18,6 +18,7 @@ A personal sales task management system for tracking pre-sale and post-sale acti
 sales-crm-tasks/
   docs/
     design.md        ← full PRD + Technical Design Document
+    operations.md    ← reference: project IDs, URLs, env var matrix, current state
     mockups/
       main-view-v3.html  ← final approved UI mockup (open in browser)
   db/
@@ -76,7 +77,7 @@ npm run test:integration
 
 ## Getting started
 
-See `docs/design.md` for the full system design, data model, and implementation plan.
+See `docs/design.md` for the full system design, data model, and implementation plan. See `docs/operations.md` for concrete project IDs, URLs, and which secrets live where.
 
 ## Status
 
