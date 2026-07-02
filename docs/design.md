@@ -1172,9 +1172,10 @@ _See Section 10: Deployment guide (to be completed)_
 1. Configure custom domain (optional)
 2. Set production environment variables in Vercel
 3. Set Vercel Deployment Protection to "Only Preview Deployments" so Clerk is the sole access gate for production ([issue #1](https://github.com/lererholdings/sales-crm-tasks/issues/1))
-4. Confirm CI is green on `main` before announcing go-live
-5. Final end-to-end test with all 5 users
-6. Brief all users on login flow and basic usage
+4. Seed admin user(s) in the production DB ([issue #3](https://github.com/lererholdings/sales-crm-tasks/issues/3)) — Milestone 2's seeding only covered the dev project
+5. Confirm CI is green on `main` before announcing go-live
+6. Final end-to-end test with all 5 users
+7. Brief all users on login flow and basic usage
 
 **Checkpoint ✅**
 - All 5 users can log in and create/update tasks
