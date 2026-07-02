@@ -53,7 +53,7 @@ A personal sales task management system for a team of ~5 users. Tracks pre-sale 
 
 ## 2. Users and roles
 
-~5 internal users. Two roles:
+~5 internal users today — not a hard ceiling, see "User scale ambition" in section 12. Two roles:
 
 | Role | Capabilities |
 |---|---|
@@ -1167,9 +1167,10 @@ _See Section 10: Deployment guide (to be completed)_
 **Tasks:**
 1. Configure custom domain (optional)
 2. Set production environment variables in Vercel
-3. Confirm CI is green on `main` before announcing go-live
-4. Final end-to-end test with all 5 users
-5. Brief all users on login flow and basic usage
+3. Set Vercel Deployment Protection to "Only Preview Deployments" so Clerk is the sole access gate for production ([issue #1](https://github.com/lererholdings/sales-crm-tasks/issues/1))
+4. Confirm CI is green on `main` before announcing go-live
+5. Final end-to-end test with all 5 users
+6. Brief all users on login flow and basic usage
 
 **Checkpoint ✅**
 - All 5 users can log in and create/update tasks
@@ -1256,3 +1257,5 @@ Visual mockups are saved as standalone interactive HTML files in `docs/mockups/`
 | Partner-only tasks | `account_id` nullable on tasks | A task may originate from a partner query before the end customer is known. The group header shows `PartnerZ [Partner only]`. A "Link to account" option in the context menu sets `account_id` via PATCH. |
 | Context menu | ⋯ button on row hover | Keeps the table clean. All task actions (edit, duplicate, delete, link to account) live in the context menu rather than cluttering the row or notes column. |
 | UI theme | Emerald/green palette, Clerk-style typography, dark mode | Navbar: `#085041`. Accents: `#1D9E75`. Group headers: `#9FE1CB`. Avatars: green and blue only. Task names: soft green. Selected row: gray bg + green left border. Dark mode toggle in navbar; also respects OS preference. Dark surfaces: `#1a1f1e` / `#222927`. |
+| Access gate ownership | Clerk is the sole access gate; Vercel Deployment Protection restricted to "Only Preview Deployments" | Avoids running two overlapping auth systems in production. Vercel protection is useful for previews (keeps in-progress work private) but must not gate production once real users need to log in via Clerk. See [issue #1](https://github.com/lererholdings/sales-crm-tasks/issues/1). |
+| User scale ambition | Architecture should not assume a hard ceiling of ~5 users | Team is ~5 today, but avoid decisions that make later growth expensive: keep list endpoints paginated/indexed rather than fetch-all, keep Clerk/Supabase on tiers with headroom (Clerk free tier supports up to 10,000 MAU), and revisit rate limiting + `audit_log` retention in Milestone 9 with growth in mind, not just current volume. Not a reason to over-engineer now — just don't paint into a corner. |

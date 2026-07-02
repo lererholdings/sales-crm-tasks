@@ -40,6 +40,11 @@ npx supabase db push                        # applies any pending migrations in 
 
 To make a schema change, add a new file to `supabase/migrations/` (timestamp-prefixed, e.g. `npx supabase migration new <name>`) rather than editing existing migrations.
 
+## Tracking follow-ups
+
+- **Concrete, closeable action items** ("fix X before go-live") → [GitHub Issues](https://github.com/lererholdings/sales-crm-tasks/issues)
+- **Standing architectural decisions/constraints** that should shape how future work gets built → the "Design decisions log" (`docs/design.md` section 12)
+
 ## Getting started
 
 See `docs/design.md` for the full system design, data model, and implementation plan.
