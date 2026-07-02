@@ -28,17 +28,31 @@ sales-crm-tasks/
   api/               ← Vercel serverless functions
 ```
 
+## Database access
+
+`api/` functions talk to Postgres directly via the `pg` driver (`DATABASE_URL`), not the Supabase JS client — see `docs/design.md` section 12, "Database access pattern," for why. `DATABASE_URL` must be the **Transaction pooler** connection string (port 6543), not the direct :5432 one — serverless functions need pooled connections.
+
+There are two Supabase projects (see section 12, "Environment separation"):
+- **Production** (`uuuppszvwbgmyyvrgwmy`) — used by the Vercel Production deployment (`main`)
+- **Dev** (`mtloxubtjinllxaenavu`) — used by local development and Vercel Preview deployments
+
+`DATABASE_URL` is scoped per-environment in Vercel accordingly. Both use the Transaction pooler at `aws-1-ap-southeast-2.pooler.supabase.com:6543`, user `postgres.<project-ref>` — only the ref and password differ.
+
 ## Database migrations
 
-Schema changes are deployed via the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started):
+Schema changes are deployed via the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started). Since there are two projects, migrations are pushed to each individually — `supabase link` only tracks one project at a time:
 
 ```
-npx supabase login                          # one-time, opens browser
-npx supabase link --project-ref <ref>       # one-time, links this repo to your Supabase project
-npx supabase db push                        # applies any pending migrations in supabase/migrations/
+npx supabase login                                        # one-time, opens browser
+
+npx supabase link --project-ref mtloxubtjinllxaenavu       # switch link to the dev project
+npx supabase db push
+
+npx supabase link --project-ref uuuppszvwbgmyyvrgwmy       # switch link to the prod project
+npx supabase db push
 ```
 
-To make a schema change, add a new file to `supabase/migrations/` (timestamp-prefixed, e.g. `npx supabase migration new <name>`) rather than editing existing migrations.
+To make a schema change, add a new file to `supabase/migrations/` (timestamp-prefixed, e.g. `npx supabase migration new <name>`) rather than editing existing migrations — then push it to both projects.
 
 ## Tracking follow-ups
 

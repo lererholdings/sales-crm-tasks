@@ -953,7 +953,7 @@ _Goal: empty app deployed live with auth working_
 4. Create Supabase project — copy connection string
 5. `npx supabase login`, then `npx supabase link --project-ref <ref>` and `npx supabase db push` to deploy `supabase/migrations/` — verify all tables created
 6. Create Clerk application — configure allowed origins, copy keys
-7. Add environment variables to Vercel: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `CLERK_SECRET_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`
+7. Add environment variables to Vercel: `DATABASE_URL`, `CLERK_SECRET_KEY`, `VITE_CLERK_PUBLISHABLE_KEY` — `DATABASE_URL` scoped per environment (Production → prod Supabase project, Preview/Development → dev Supabase project, see section 12 "Environment separation")
 8. Scaffold `api/` folder with one test endpoint `GET /api/health → { ok: true }`
 9. Wire Clerk `<ClerkProvider>` into the React app
 10. Add `ProtectedRoute` — unauthenticated users redirect to Clerk hosted login
@@ -974,13 +974,16 @@ _Goal: empty app deployed live with auth working_
 _Goal: every API call knows who the user is and what role they have_
 
 **Tasks:**
-1. Build `validateSession` middleware — verifies Clerk JWT, resolves `clerk_user_id` → internal `users` row, attaches `{ id, role }` to request context
-2. Build user auto-provisioning — if Clerk user has no row in `users` table yet, create one on first login (display name + email from Clerk token)
-3. `GET /api/users` — list all users (used for assignee dropdowns)
-4. `PATCH /api/users/:id` — update role (admin only)
-5. Seed one admin user manually in Supabase (your own account)
-6. Add `lib/apiClient.js` to frontend — fetch wrapper that attaches Clerk JWT to every request
-7. Tests: `validateSession` middleware (valid / missing / expired / malformed token), user auto-provisioning (first login creates a row, second login doesn't duplicate), `PATCH /api/users/:id` 403s for non-admin
+1. Create a second Supabase project for dev/preview use; keep the Milestone 1 project as production. Push `supabase/migrations/` to both (see section 12, "Environment separation")
+2. Add `api/_lib/db.js` — `pg.Pool` against `DATABASE_URL` (pooled/transaction-mode connection string, see section 12 "Database access pattern")
+3. Build `validateSession` middleware (`api/_lib/auth.js`) — verifies Clerk JWT, resolves `clerk_user_id` → internal `users` row, attaches `{ id, role, ... }` to the handler via a `withAuth` wrapper
+4. Build user auto-provisioning — if Clerk user has no row in `users` table yet, create one on first login (display name + email pulled from Clerk)
+5. `GET /api/users` — list all users (used for assignee dropdowns)
+6. `PATCH /api/users/:id` — update role (admin only)
+7. Seed one admin user manually in Supabase (your own account) — log in once to auto-provision the row, then `UPDATE users SET role = 'admin' WHERE email = '...'`
+8. Add `lib/apiClient.js` to frontend — fetch wrapper that attaches Clerk JWT to every request
+9. Scope `DATABASE_URL` per environment in Vercel: Production → prod Supabase project, Preview + Development → dev Supabase project
+10. Tests: `validateSession` middleware (valid / missing / expired / malformed token), user auto-provisioning (first login creates a row, second login doesn't duplicate), `PATCH /api/users/:id` 403s for non-admin
 
 **Checkpoint ✅**
 - Login creates a user row in Supabase automatically
@@ -1259,3 +1262,5 @@ Visual mockups are saved as standalone interactive HTML files in `docs/mockups/`
 | UI theme | Emerald/green palette, Clerk-style typography, dark mode | Navbar: `#085041`. Accents: `#1D9E75`. Group headers: `#9FE1CB`. Avatars: green and blue only. Task names: soft green. Selected row: gray bg + green left border. Dark mode toggle in navbar; also respects OS preference. Dark surfaces: `#1a1f1e` / `#222927`. |
 | Access gate ownership | Clerk is the sole access gate; Vercel Deployment Protection restricted to "Only Preview Deployments" | Avoids running two overlapping auth systems in production. Vercel protection is useful for previews (keeps in-progress work private) but must not gate production once real users need to log in via Clerk. See [issue #1](https://github.com/lererholdings/sales-crm-tasks/issues/1). |
 | User scale ambition | Architecture should not assume a hard ceiling of ~5 users | Team is ~5 today, but avoid decisions that make later growth expensive: keep list endpoints paginated/indexed rather than fetch-all, keep Clerk/Supabase on tiers with headroom (Clerk free tier supports up to 10,000 MAU), and revisit rate limiting + `audit_log` retention in Milestone 9 with growth in mind, not just current volume. Not a reason to over-engineer now — just don't paint into a corner. |
+| Database access pattern | Direct Postgres via the `pg` driver against a pooled connection string, not `@supabase/supabase-js` | Matches the stated migration goal in section 4 — moving off Supabase later means changing `DATABASE_URL`, not rewriting every query to drop `.from()`/PostgREST calls. Vercel functions are serverless/short-lived, so `DATABASE_URL` must be the Transaction pooler string (port 6543, Supavisor/pgbouncer), not the direct :5432 connection — direct connections exhaust Postgres's connection cap under serverless concurrency. |
+| Environment separation | Two Supabase projects: one for dev/preview, one for production | Set up in Milestone 2 rather than deferred, since no real data existed yet — the cheapest point to do this. Mirrors the Vercel Preview/Production split already in place. `DATABASE_URL` is scoped per-environment in Vercel; migrations are pushed to both projects (`supabase link --project-ref <ref>` per project, no single persistent link). |
