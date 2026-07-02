@@ -54,6 +54,20 @@ npx supabase db push
 
 To make a schema change, add a new file to `supabase/migrations/` (timestamp-prefixed, e.g. `npx supabase migration new <name>`) rather than editing existing migrations — then push it to both projects.
 
+## Testing
+
+Two tiers, both run in CI:
+
+- **Unit tests** (`npm test`, `npm --prefix frontend run test`) — everything external (DB, Clerk) is mocked. Fast, no secrets needed, safe for anyone to run.
+- **Integration tests** (`npm run test:integration`) — run the real `api/` handlers against the real dev database, authenticated via the test bypass (see `docs/design.md` section 12, "Test auth bypass") instead of a real Clerk login. Requires `DATABASE_URL` (dev project) and `TEST_AUTH_BYPASS_SECRET` to be set. Test rows use a `test_ci_*` `clerk_user_id` prefix and are cleaned up after each run.
+
+To run integration tests locally, both vars need to be in your shell environment (not just `.env.local` — vitest doesn't auto-load it the way Vite does for the frontend):
+
+```
+set -a && source <(grep -v '^#' .env.local | grep -v '^$') && set +a
+npm run test:integration
+```
+
 ## Tracking follow-ups
 
 - **Concrete, closeable action items** ("fix X before go-live") → [GitHub Issues](https://github.com/lererholdings/sales-crm-tasks/issues)

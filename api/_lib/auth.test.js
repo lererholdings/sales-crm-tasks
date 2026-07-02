@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const queryMock = vi.fn()
 vi.mock('./db.js', () => ({ query: (...args) => queryMock(...args) }))
@@ -94,5 +94,79 @@ describe('validateSession', () => {
 
     expect(queryMock).toHaveBeenCalledTimes(1)
     expect(getUserMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('validateSession test bypass', () => {
+  beforeEach(() => {
+    queryMock.mockReset()
+    verifyTokenMock.mockReset()
+    getUserMock.mockReset()
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('is unreachable when TEST_AUTH_BYPASS_SECRET is unset, even with a matching header', async () => {
+    vi.stubEnv('TEST_AUTH_BYPASS_SECRET', '')
+    const req = mockReq({ 'x-test-bypass-secret': 'anything', 'x-test-clerk-user-id': 'clerk_x' })
+
+    await expect(validateSession(req)).rejects.toMatchObject({ status: 401 })
+    expect(queryMock).not.toHaveBeenCalled()
+  })
+
+  it('falls through to the real auth path when the bypass secret does not match', async () => {
+    vi.stubEnv('TEST_AUTH_BYPASS_SECRET', 'real-secret')
+    const req = mockReq({ 'x-test-bypass-secret': 'wrong-secret', 'x-test-clerk-user-id': 'clerk_x' })
+
+    await expect(validateSession(req)).rejects.toMatchObject({ status: 401, message: 'Missing bearer token' })
+  })
+
+  it('requires x-test-clerk-user-id even with a correct secret', async () => {
+    vi.stubEnv('TEST_AUTH_BYPASS_SECRET', 'real-secret')
+    const req = mockReq({ 'x-test-bypass-secret': 'real-secret' })
+
+    await expect(validateSession(req)).rejects.toMatchObject({ status: 401 })
+  })
+
+  it('provisions a test user without calling the real Clerk API', async () => {
+    vi.stubEnv('TEST_AUTH_BYPASS_SECRET', 'real-secret')
+    queryMock
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{ id: 'tu1', role: 'member', display_name: 'CI Bot', email: 'ci@test.invalid' }],
+      })
+    const req = mockReq({
+      'x-test-bypass-secret': 'real-secret',
+      'x-test-clerk-user-id': 'clerk_ci',
+      'x-test-display-name': 'CI Bot',
+      'x-test-email': 'ci@test.invalid',
+    })
+
+    const user = await validateSession(req)
+
+    expect(user).toEqual({
+      id: 'tu1',
+      role: 'member',
+      clerkUserId: 'clerk_ci',
+      displayName: 'CI Bot',
+      email: 'ci@test.invalid',
+    })
+    expect(getUserMock).not.toHaveBeenCalled()
+    expect(verifyTokenMock).not.toHaveBeenCalled()
+  })
+
+  it('resolves an existing bypass user without re-provisioning', async () => {
+    vi.stubEnv('TEST_AUTH_BYPASS_SECRET', 'real-secret')
+    queryMock.mockResolvedValueOnce({
+      rows: [{ id: 'tu2', role: 'admin', display_name: 'CI Admin', email: 'ci-admin@test.invalid' }],
+    })
+    const req = mockReq({ 'x-test-bypass-secret': 'real-secret', 'x-test-clerk-user-id': 'clerk_ci_admin' })
+
+    const user = await validateSession(req)
+
+    expect(user.role).toBe('admin')
+    expect(queryMock).toHaveBeenCalledTimes(1)
   })
 })

@@ -20,27 +20,62 @@ function toUser(row, clerkUserId) {
   }
 }
 
-// First login for a given clerk_user_id creates the users row (display name
-// + email pulled from Clerk); every login after that just resolves it.
-// ON CONFLICT guards against two concurrent first-logins racing each other.
-async function provisionUser(clerkUserId) {
-  const clerkUser = await clerkClient.users.getUser(clerkUserId)
-  const email =
-    clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ??
-    clerkUser.emailAddresses[0]?.emailAddress
-  const displayName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || email
+// First login for a given clerk_user_id creates the users row; every login
+// after that just resolves it. ON CONFLICT guards against two concurrent
+// first-logins racing each other. provisionDetails is only called when a
+// row doesn't already exist, so the real (Clerk API) path and the test
+// bypass path can supply displayName/email differently without duplicating
+// the lookup/insert logic.
+async function resolveOrProvision(clerkUserId, provisionDetails) {
+  const { rows } = await query('SELECT id, role, display_name, email FROM users WHERE clerk_user_id = $1', [
+    clerkUserId,
+  ])
+  if (rows[0]) return rows[0]
 
-  const { rows } = await query(
+  const { displayName, email } = await provisionDetails()
+  const inserted = await query(
     `INSERT INTO users (clerk_user_id, display_name, email)
      VALUES ($1, $2, $3)
      ON CONFLICT (clerk_user_id) DO UPDATE SET clerk_user_id = EXCLUDED.clerk_user_id
      RETURNING id, role, display_name, email`,
     [clerkUserId, displayName, email],
   )
-  return rows[0]
+  return inserted.rows[0]
+}
+
+async function clerkProvisionDetails(clerkUserId) {
+  const clerkUser = await clerkClient.users.getUser(clerkUserId)
+  const email =
+    clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ??
+    clerkUser.emailAddresses[0]?.emailAddress
+  const displayName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || email
+  return { displayName, email }
+}
+
+// Test-only escape hatch for automated testing (CI integration tests, and
+// verifying deployed Preview environments without a browser login). Never
+// reachable unless TEST_AUTH_BYPASS_SECRET is set — which must NEVER be set
+// in Production (see design.md section 12, "Test auth bypass"). Skips real
+// Clerk verification entirely; the DB lookup/auto-provisioning logic below
+// still runs for real, so these tests exercise real behavior, not mocks.
+async function validateTestBypass(req) {
+  const clerkUserId = req.headers['x-test-clerk-user-id']
+  if (!clerkUserId) {
+    throw new AuthError(401, 'x-test-clerk-user-id header required in test bypass mode')
+  }
+  const row = await resolveOrProvision(clerkUserId, () => ({
+    displayName: req.headers['x-test-display-name'] ?? 'Test User',
+    email: req.headers['x-test-email'] ?? `${clerkUserId}@test.invalid`,
+  }))
+  return toUser(row, clerkUserId)
 }
 
 export async function validateSession(req) {
+  const bypassSecret = process.env.TEST_AUTH_BYPASS_SECRET
+  if (bypassSecret && req.headers['x-test-bypass-secret'] === bypassSecret) {
+    return validateTestBypass(req)
+  }
+
   const header = req.headers.authorization ?? req.headers.Authorization
   if (!header?.startsWith('Bearer ')) {
     throw new AuthError(401, 'Missing bearer token')
@@ -55,10 +90,7 @@ export async function validateSession(req) {
   }
 
   const clerkUserId = claims.sub
-  const { rows } = await query('SELECT id, role, display_name, email FROM users WHERE clerk_user_id = $1', [
-    clerkUserId,
-  ])
-  const row = rows[0] ?? (await provisionUser(clerkUserId))
+  const row = await resolveOrProvision(clerkUserId, () => clerkProvisionDetails(clerkUserId))
   return toUser(row, clerkUserId)
 }
 
