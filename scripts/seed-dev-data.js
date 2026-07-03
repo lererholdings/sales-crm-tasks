@@ -1,4 +1,5 @@
 import { query } from '../api/_lib/db.js'
+import { logFieldChanges, toCreatedChanges } from '../api/_lib/audit.js'
 
 // Same hard guard as reset-dev-db.js — see docs/operations.md.
 const DEV_PROJECT_REF = 'mtloxubtjinllxaenavu'
@@ -24,9 +25,10 @@ const DEMO_ACCOUNTS = [
 
 // Direct SQL, not the API — this is dev-only tooling with no server
 // running and no auth token to attach, so it bypasses the API layer
-// entirely. That also means seeded accounts get no audit_log "created"
-// entry (nothing calls logFieldChanges here) — edit one via the UI
-// afterward if you want to see a real audit trail.
+// entirely. It still calls the same logFieldChanges/toCreatedChanges
+// helpers api/accounts/index.js uses for a real POST, so the audit_log
+// "created" entry has the identical shape a real API call would produce —
+// no separate hand-rolled logic to drift out of sync.
 async function main() {
   assertDevDatabase()
 
@@ -42,17 +44,32 @@ async function main() {
       continue
     }
 
-    await query(
+    const { rows } = await query(
       `INSERT INTO accounts (name, country, acv, sfdc_account_url, last_updated_by)
-       VALUES ($1, $2, $3, $4, $5)`,
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id`,
       [account.name, account.country, account.acv, account.sfdc_account_url, lastUpdatedBy],
     )
+
+    await logFieldChanges(
+      'account',
+      rows[0].id,
+      lastUpdatedBy,
+      'created',
+      toCreatedChanges({
+        name: account.name,
+        country: account.country,
+        acv: account.acv,
+        sfdc_account_url: account.sfdc_account_url,
+      }),
+    )
+
     created += 1
   }
 
-  console.log(`Seeded ${created} account(s), skipped ${skipped} already present.`)
+  console.log(`Seeded ${created} account(s) with audit_log entries, skipped ${skipped} already present.`)
   if (!lastUpdatedBy) {
-    console.log('No existing users found — seeded accounts have no last_updated_by. Log in once first if you want that populated.')
+    console.log('No existing users found — seeded accounts and audit entries have no user. Log in once first if you want that populated.')
   }
 }
 
