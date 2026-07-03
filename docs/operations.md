@@ -62,6 +62,7 @@ Open issues as of Milestone 3:
 - [#5](https://github.com/lererholdings/sales-crm-tasks/issues/5) — Archive/delete accounts + suggest-restore on similar create (Milestone 5, blocked on tasks existing)
 - [#6](https://github.com/lererholdings/sales-crm-tasks/issues/6) — Skip Vercel redeploy for non-code changes (Milestone 4, blocked on locating "Ignored Build Step" in the Vercel dashboard)
 - [#7](https://github.com/lererholdings/sales-crm-tasks/issues/7) — Accounts list sortable columns + per-column filtering (Milestone 6)
+- [#9](https://github.com/lererholdings/sales-crm-tasks/issues/9) — Accounts list ACV column + per-user column visibility/order (Milestone 6)
 
 Closed: [#4](https://github.com/lererholdings/sales-crm-tasks/issues/4) — Skip CI for markdown-only changes (fixed in Milestone 3, `paths-ignore` on `**.md` + `docs/mockups/**`; verified with a markdown-only commit that no CI run was triggered for it).
 
