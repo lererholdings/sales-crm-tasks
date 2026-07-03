@@ -51,20 +51,33 @@ Where to get/rotate each value:
 
 ⚠️ Vercel only injects env var values into deployments created *after* the value was set/changed — a fresh push (or manual redeploy) is needed to pick up a change to an existing var.
 
-## GitHub milestones & issues
+## GitHub Milestones
 
-GitHub Milestones mirror `design.md`'s Milestone 1–10 titles exactly (created 2026-07-02, Milestone 1 closed since merged). Convention: closeable action items → issues tagged with their target milestone; standing architectural decisions → `design.md` section 12 instead (see README.md "Tracking follow-ups").
+Mirror `design.md`'s Milestone 1–10 titles exactly (created 2026-07-02, Milestone 1 closed since merged). Convention: closeable action items → issues tagged with their target milestone; standing architectural decisions → `design.md` section 12 instead (see README.md "Tracking follow-ups").
 
-Open issues as of Milestone 3:
-- [#1](https://github.com/lererholdings/sales-crm-tasks/issues/1) — Clerk sole access gate (Milestone 10)
-- [#2](https://github.com/lererholdings/sales-crm-tasks/issues/2) — Display name sync via JWT claims (unscheduled)
-- [#3](https://github.com/lererholdings/sales-crm-tasks/issues/3) — Prod admin seeding (Milestone 10)
-- [#5](https://github.com/lererholdings/sales-crm-tasks/issues/5) — Archive/delete accounts + suggest-restore on similar create (Milestone 5, blocked on tasks existing)
-- [#6](https://github.com/lererholdings/sales-crm-tasks/issues/6) — Skip Vercel redeploy for non-code changes (Milestone 4, blocked on locating "Ignored Build Step" in the Vercel dashboard)
-- [#7](https://github.com/lererholdings/sales-crm-tasks/issues/7) — Accounts list sortable columns + per-column filtering (Milestone 6)
-- [#9](https://github.com/lererholdings/sales-crm-tasks/issues/9) — Accounts list ACV column + per-user column visibility/order (Milestone 6)
+## Open issues checklist
 
-Closed: [#4](https://github.com/lererholdings/sales-crm-tasks/issues/4) — Skip CI for markdown-only changes (fixed in Milestone 3, `paths-ignore` on `**.md` + `docs/mockups/**`; verified with a markdown-only commit that no CI run was triggered for it).
+Living index, grouped by target milestone — **check this section at the start and end of every milestone**, and update it immediately whenever an issue is filed/closed/retagged. Unlike other doc updates, this section is *not* gated by the "docs land with the next milestone's commits" workflow rule — it's a standing checklist, not narrative content tied to a specific milestone's own work.
+
+**Milestone 4 — Tasks API**
+- [#6](https://github.com/lererholdings/sales-crm-tasks/issues/6) — Skip Vercel redeploy for non-code changes (blocked on locating "Ignored Build Step" in the Vercel dashboard)
+
+**Milestone 5 — Core task UI**
+- [#5](https://github.com/lererholdings/sales-crm-tasks/issues/5) — Archive/delete accounts + suggest-restore on similar create (blocked on tasks existing)
+
+**Milestone 6 — Filters, sorting, and column preferences**
+- [#7](https://github.com/lererholdings/sales-crm-tasks/issues/7) — Accounts list sortable columns + per-column filtering
+- [#9](https://github.com/lererholdings/sales-crm-tasks/issues/9) — Accounts list ACV column + per-user column visibility/order
+
+**Milestone 10 — Deployment and go-live**
+- [#1](https://github.com/lererholdings/sales-crm-tasks/issues/1) — Clerk sole access gate
+- [#3](https://github.com/lererholdings/sales-crm-tasks/issues/3) — Prod admin seeding
+
+**Unscheduled**
+- [#2](https://github.com/lererholdings/sales-crm-tasks/issues/2) — Display name sync via JWT claims
+
+**Recently closed**
+- [#4](https://github.com/lererholdings/sales-crm-tasks/issues/4) — Skip CI for markdown-only changes (fixed in Milestone 3, `paths-ignore` on `**.md` + `docs/mockups/**`; verified with a markdown-only commit that no CI run was triggered for it)
 
 ## Database
 
