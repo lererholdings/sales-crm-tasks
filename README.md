@@ -61,6 +61,15 @@ npx supabase db push
 
 To make a schema change, add a new file to `supabase/migrations/` (timestamp-prefixed, e.g. `npx supabase migration new <name>`) rather than editing existing migrations — then push it to both projects.
 
+## Dev database maintenance
+
+Both scripts live in `scripts/` and hard-refuse to run unless `DATABASE_URL` contains the dev project ref (`mtloxubtjinllxaenavu`) — that check is the actual safety mechanism, not just a warning. Same shell-sourcing as above is needed to run them locally.
+
+```
+npm run db:reset-dev    # clears accounts/tasks/task_notes/audit_log — leaves users and task_types alone. Interactive confirm, or pass --yes
+npm run db:seed-dev     # inserts a handful of demo accounts as an optional starting point. Safe to re-run — skips accounts that already exist by name
+```
+
 ## Testing
 
 Three tiers, all run in CI on every push (the third only for non-`main` branches):

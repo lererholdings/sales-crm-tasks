@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.config.js"
+    "test:integration": "vitest run --config vitest.integration.config.js",
+    "db:reset-dev": "node scripts/reset-dev-db.js",
+    "db:seed-dev": "node scripts/seed-dev-data.js"
   },
   "devDependencies": {
     "vitest": "^3.2.4"
