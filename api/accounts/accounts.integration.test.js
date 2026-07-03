@@ -62,6 +62,28 @@ describe.skipIf(!hasEnv)('accounts API integration (real dev DB)', () => {
     expect(listRes.body.some((a) => a.id === createRes.body.id)).toBe(true)
   })
 
+  it('writes a real audit_log "created" row on POST', async () => {
+    const name = `Test CI Account Created ${runId}`
+    const createRes = mockRes()
+    await listCreateHandler(
+      bypassReq({ method: 'POST', body: { name, country: 'Australia', acv: 30000 } }),
+      createRes,
+    )
+    const accountId = createRes.body.id
+    createdAccountIds.push(accountId)
+
+    const { rows } = await query(
+      "SELECT changed_fields FROM audit_log WHERE entity_type = 'account' AND entity_id = $1 AND action = 'created'",
+      [accountId],
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0].changed_fields).toEqual({
+      name: { from: null, to: name },
+      country: { from: null, to: 'Australia' },
+      acv: { from: null, to: 30000 },
+    })
+  })
+
   it('gets a single account with acv', async () => {
     const name = `Test CI Account Single ${runId}`
     const createRes = mockRes()

@@ -55,11 +55,12 @@ Where to get/rotate each value:
 
 GitHub Milestones mirror `design.md`'s Milestone 1–10 titles exactly (created 2026-07-02, Milestone 1 closed since merged). Convention: closeable action items → issues tagged with their target milestone; standing architectural decisions → `design.md` section 12 instead (see README.md "Tracking follow-ups").
 
-Open issues as of Milestone 2:
+Open issues as of Milestone 3:
 - [#1](https://github.com/lererholdings/sales-crm-tasks/issues/1) — Clerk sole access gate (Milestone 10)
 - [#2](https://github.com/lererholdings/sales-crm-tasks/issues/2) — Display name sync via JWT claims (unscheduled)
 - [#3](https://github.com/lererholdings/sales-crm-tasks/issues/3) — Prod admin seeding (Milestone 10)
 - [#4](https://github.com/lererholdings/sales-crm-tasks/issues/4) — Skip CI for markdown-only changes (Milestone 3)
+- [#5](https://github.com/lererholdings/sales-crm-tasks/issues/5) — Archive/delete accounts + suggest-restore on similar create (unscheduled, blocked on tasks existing)
 
 ## Database
 

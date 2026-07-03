@@ -1,5 +1,6 @@
 import { withAuth } from '../_lib/auth.js'
 import { query } from '../_lib/db.js'
+import { logFieldChanges, toCreatedChanges } from '../_lib/audit.js'
 
 function toAccount(row, { includeAcv }) {
   const account = {
@@ -48,6 +49,15 @@ export default withAuth(async (req, res, user) => {
       [name, country, acv ?? null, sfdcAccountUrl ?? null, user.id],
     )
     const row = rows[0]
+
+    await logFieldChanges(
+      'account',
+      row.id,
+      user.id,
+      'created',
+      toCreatedChanges({ name, country, acv: acv ?? null, sfdc_account_url: sfdcAccountUrl ?? null }),
+    )
+
     return res
       .status(201)
       .json(toAccount({ ...row, updated_by_id: user.id, updated_by_name: user.displayName }, { includeAcv: true }))

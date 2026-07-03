@@ -65,7 +65,7 @@ export default withAuth(async (req, res, user) => {
     )
     const updated = rows[0]
 
-    await logFieldChanges('account', id, user.id, changes)
+    await logFieldChanges('account', id, user.id, 'updated', changes)
 
     return res
       .status(200)

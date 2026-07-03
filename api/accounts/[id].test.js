@@ -118,7 +118,8 @@ describe('PATCH /api/accounts/:id', () => {
 
     const auditCall = queryMock.mock.calls[3]
     expect(auditCall[0]).toContain('INSERT INTO audit_log')
-    expect(JSON.parse(auditCall[1][3])).toEqual({ acv: { from: 50000, to: 120000 } })
+    expect(auditCall[1][3]).toBe('updated')
+    expect(JSON.parse(auditCall[1][4])).toEqual({ acv: { from: 50000, to: 120000 } })
   })
 
   it('does not log a change when the new value equals the current value', async () => {

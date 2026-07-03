@@ -129,4 +129,25 @@ describe('POST /api/accounts', () => {
     expect(res.body.acv).toBe(120000)
     expect(res.body.last_updated_by).toEqual({ id: 'caller-id', display_name: 'Caller' })
   })
+
+  it('writes an audit_log entry with action "created" and { from: null, to } for each field', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] }).mockResolvedValueOnce({
+      rows: [{ id: 'a1', name: 'Acme', country: 'AU', sfdc_account_url: null, acv: '120000.00', updated_at: 't' }],
+    })
+
+    await handler(authedReq({ method: 'POST', body: { name: 'Acme', country: 'AU', acv: 120000 } }), mockRes())
+
+    const auditCall = queryMock.mock.calls[2]
+    expect(auditCall[0]).toContain('INSERT INTO audit_log')
+    const [entityType, entityId, userId, action, changedFields] = auditCall[1]
+    expect(entityType).toBe('account')
+    expect(entityId).toBe('a1')
+    expect(userId).toBe('caller-id')
+    expect(action).toBe('created')
+    expect(JSON.parse(changedFields)).toEqual({
+      name: { from: null, to: 'Acme' },
+      country: { from: null, to: 'AU' },
+      acv: { from: null, to: 120000 },
+    })
+  })
 })
