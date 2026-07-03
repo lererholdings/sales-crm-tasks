@@ -12,6 +12,12 @@ A personal sales task management system for tracking pre-sale and post-sale acti
 | Auth | Clerk |
 | Version control | GitHub |
 
+## Workflow
+
+- Each milestone is developed on its own branch (`milestone-N-description`) and merged to `main` via a **GitHub Pull Request** — not a local fast-forward merge. This gives a real, reviewable PR history.
+- Nothing gets pushed to any branch (including feature branches, not just `main`) without explicit confirmation first.
+- Doc/decision updates that come up mid-conversation are written into the docs immediately but committed as part of the next milestone's work, not as standalone pushes.
+
 ## Repository structure
 
 ```
@@ -54,6 +60,15 @@ npx supabase db push
 ```
 
 To make a schema change, add a new file to `supabase/migrations/` (timestamp-prefixed, e.g. `npx supabase migration new <name>`) rather than editing existing migrations — then push it to both projects.
+
+## Dev database maintenance
+
+Both scripts live in `scripts/` and hard-refuse to run unless `DATABASE_URL` contains the dev project ref (`mtloxubtjinllxaenavu`) — that check is the actual safety mechanism, not just a warning. Same shell-sourcing as above is needed to run them locally.
+
+```
+npm run db:reset-dev    # clears accounts/tasks/task_notes/audit_log — leaves users and task_types alone. Interactive confirm, or pass --yes
+npm run db:seed-dev     # inserts a handful of demo accounts as an optional starting point. Safe to re-run — skips accounts that already exist by name
+```
 
 ## Testing
 
