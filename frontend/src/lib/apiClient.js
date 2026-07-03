@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 
 async function request(getToken, method, path, body) {
@@ -28,13 +29,18 @@ async function request(getToken, method, path, body) {
 }
 
 // Attaches the current Clerk session token to every request automatically.
+// Memoized on getToken so the returned object has a stable identity across
+// renders — callers put this in a useEffect/useCallback dependency array.
 export function useApiClient() {
   const { getToken } = useAuth()
 
-  return {
-    get: (path) => request(getToken, 'GET', path),
-    post: (path, body) => request(getToken, 'POST', path, body),
-    patch: (path, body) => request(getToken, 'PATCH', path, body),
-    delete: (path) => request(getToken, 'DELETE', path),
-  }
+  return useMemo(
+    () => ({
+      get: (path) => request(getToken, 'GET', path),
+      post: (path, body) => request(getToken, 'POST', path, body),
+      patch: (path, body) => request(getToken, 'PATCH', path, body),
+      delete: (path) => request(getToken, 'DELETE', path),
+    }),
+    [getToken],
+  )
 }

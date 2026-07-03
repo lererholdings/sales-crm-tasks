@@ -12,6 +12,12 @@ A personal sales task management system for tracking pre-sale and post-sale acti
 | Auth | Clerk |
 | Version control | GitHub |
 
+## Workflow
+
+- Each milestone is developed on its own branch (`milestone-N-description`) and merged to `main` via a **GitHub Pull Request** — not a local fast-forward merge. This gives a real, reviewable PR history.
+- Nothing gets pushed to any branch (including feature branches, not just `main`) without explicit confirmation first.
+- Doc/decision updates that come up mid-conversation are written into the docs immediately but committed as part of the next milestone's work, not as standalone pushes.
+
 ## Repository structure
 
 ```

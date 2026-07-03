@@ -8,5 +8,9 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     include: ['api/**/*.integration.test.js'],
+    // Real network round-trips over the Supabase pooler, especially first
+    // connection per test file when multiple files run concurrently — the
+    // 5s default is too tight.
+    testTimeout: 15000,
   },
 })
