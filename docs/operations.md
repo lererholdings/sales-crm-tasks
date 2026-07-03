@@ -77,7 +77,7 @@ Living index, grouped by target milestone — **check this section at the start 
 - [#2](https://github.com/lererholdings/sales-crm-tasks/issues/2) — Display name sync via JWT claims
 
 **Recently closed**
-- [#4](https://github.com/lererholdings/sales-crm-tasks/issues/4) — Skip CI for markdown-only changes (fixed in Milestone 3, `paths-ignore` on `**.md` + `docs/mockups/**`; verified with a markdown-only commit that no CI run was triggered for it)
+- [#4](https://github.com/lererholdings/sales-crm-tasks/issues/4) — Skip CI for markdown-only changes (fixed in Milestone 3, `paths-ignore` on `**.md` + `docs/mockups/**`). **Known limitation, accepted as-is**: only skips for direct pushes to a branch with no open PR — once a PR exists, the same markdown-only commit still triggers a `pull_request: synchronize` run that isn't skipped (`paths-ignore` evaluates differently for that event, likely against the PR's cumulative diff rather than the latest commit). Verified both cases directly. Decision: docs-only commits within an open PR will still run CI — not pursuing a further fix.
 
 ## Database
 
