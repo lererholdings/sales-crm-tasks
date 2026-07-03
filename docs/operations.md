@@ -59,8 +59,9 @@ Open issues as of Milestone 3:
 - [#1](https://github.com/lererholdings/sales-crm-tasks/issues/1) — Clerk sole access gate (Milestone 10)
 - [#2](https://github.com/lererholdings/sales-crm-tasks/issues/2) — Display name sync via JWT claims (unscheduled)
 - [#3](https://github.com/lererholdings/sales-crm-tasks/issues/3) — Prod admin seeding (Milestone 10)
-- [#4](https://github.com/lererholdings/sales-crm-tasks/issues/4) — Skip CI for markdown-only changes (Milestone 3)
 - [#5](https://github.com/lererholdings/sales-crm-tasks/issues/5) — Archive/delete accounts + suggest-restore on similar create (Milestone 5, blocked on tasks existing)
+
+Closed: [#4](https://github.com/lererholdings/sales-crm-tasks/issues/4) — Skip CI for markdown-only changes (fixed in Milestone 3, `paths-ignore` on `**.md` + `docs/mockups/**`).
 
 ## Database
 

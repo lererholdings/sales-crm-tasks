@@ -2,8 +2,14 @@ name: CI
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/mockups/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/mockups/**'
 
 jobs:
   build-and-test:
