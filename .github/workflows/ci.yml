@@ -77,7 +77,7 @@ jobs:
       # vercel.json misconfig, cold-start issues). Uses the SAME test auth
       # bypass, so TEST_AUTH_BYPASS_SECRET must also be set in Vercel's
       # Preview environment (never Production) for this to pass.
-      - name: Smoke test the live preview
+      - name: Smoke test the live preview — static route (GET /api/users)
         env:
           PREVIEW_URL: ${{ steps.preview.outputs.url }}
           VERCEL_PROTECTION_BYPASS_SECRET: ${{ secrets.VERCEL_PROTECTION_BYPASS_SECRET }}
@@ -97,13 +97,71 @@ jobs:
           [ "$CODE" = "200" ]
           grep -q "${TEST_ID}@test.invalid" /tmp/users.json
 
-      - name: Clean up the test user created against the preview deployment
+      # Dynamic bracket routes ([id].js) are a distinct code path from static
+      # ones in Vercel's routing — a broad SPA catch-all rewrite silently
+      # swallowed them once already (see design.md section 12, "SPA rewrite
+      # must exclude /api/*"), and that class of bug can only be caught by
+      # real HTTP against a live deployment, never by mocked/in-process
+      # tests. Keep this dynamic-route check here so it can't regress
+      # unnoticed again.
+      - name: Smoke test the live preview — dynamic route (GET/PATCH /api/accounts/:id)
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          VERCEL_PROTECTION_BYPASS_SECRET: ${{ secrets.VERCEL_PROTECTION_BYPASS_SECRET }}
+          TEST_AUTH_BYPASS_SECRET: ${{ secrets.TEST_AUTH_BYPASS_SECRET }}
+        run: |
+          set -e
+          TEST_ID="test_ci_preview_${{ github.run_id }}"
+
+          CREATE_CODE=$(curl -s -o /tmp/account_create.json -w "%{http_code}" \
+            -H "x-vercel-protection-bypass: $VERCEL_PROTECTION_BYPASS_SECRET" \
+            -H "x-test-bypass-secret: $TEST_AUTH_BYPASS_SECRET" \
+            -H "x-test-clerk-user-id: $TEST_ID" \
+            -H "Content-Type: application/json" \
+            -X POST -d '{"name":"CI Preview Smoke Test Account","country":"Australia","acv":1000}' \
+            "$PREVIEW_URL/api/accounts")
+          echo "POST /api/accounts -> $CREATE_CODE"
+          cat /tmp/account_create.json
+          [ "$CREATE_CODE" = "201" ]
+          ACCOUNT_ID=$(node -e "console.log(JSON.parse(require('fs').readFileSync('/tmp/account_create.json','utf8')).id)")
+          echo "account_id=$ACCOUNT_ID" >> "$GITHUB_OUTPUT"
+
+          GET_CODE=$(curl -s -o /tmp/account_get.json -w "%{http_code}" \
+            -H "x-vercel-protection-bypass: $VERCEL_PROTECTION_BYPASS_SECRET" \
+            -H "x-test-bypass-secret: $TEST_AUTH_BYPASS_SECRET" \
+            -H "x-test-clerk-user-id: $TEST_ID" \
+            "$PREVIEW_URL/api/accounts/$ACCOUNT_ID")
+          echo "GET /api/accounts/:id -> $GET_CODE"
+          cat /tmp/account_get.json
+          [ "$GET_CODE" = "200" ]
+          grep -q '"acv":1000' /tmp/account_get.json
+
+          PATCH_CODE=$(curl -s -o /tmp/account_patch.json -w "%{http_code}" \
+            -H "x-vercel-protection-bypass: $VERCEL_PROTECTION_BYPASS_SECRET" \
+            -H "x-test-bypass-secret: $TEST_AUTH_BYPASS_SECRET" \
+            -H "x-test-clerk-user-id: $TEST_ID" \
+            -H "Content-Type: application/json" \
+            -X PATCH -d '{"acv":2000}' \
+            "$PREVIEW_URL/api/accounts/$ACCOUNT_ID")
+          echo "PATCH /api/accounts/:id -> $PATCH_CODE"
+          cat /tmp/account_patch.json
+          [ "$PATCH_CODE" = "200" ]
+          grep -q '"acv":2000' /tmp/account_patch.json
+        id: accounts_smoke_test
+
+      - name: Clean up test data created against the preview deployment
         if: always()
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ACCOUNT_ID: ${{ steps.accounts_smoke_test.outputs.account_id }}
         run: |
           node -e "
           import('./api/_lib/db.js').then(async ({ query }) => {
+            const accountId = process.env.ACCOUNT_ID;
+            if (accountId) {
+              await query('DELETE FROM audit_log WHERE entity_id = \$1', [accountId]);
+              await query('DELETE FROM accounts WHERE id = \$1', [accountId]);
+            }
             await query(\"DELETE FROM users WHERE clerk_user_id LIKE 'test_ci_preview_%'\");
             process.exit(0);
           }).catch((e) => { console.error(e); process.exit(1); });
