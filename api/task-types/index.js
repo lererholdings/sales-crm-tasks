@@ -1,5 +1,5 @@
-import { withAuth } from '../_lib/auth.js'
-import { query } from '../_lib/db.js'
+import { withAuth } from '../../lib/auth.js'
+import { query } from '../../lib/db.js'
 
 // POST/PATCH (admin-managed create/rename/activate) are Milestone 8's job —
 // this milestone only needs the read side for task creation dropdowns.

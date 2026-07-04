@@ -162,7 +162,7 @@ jobs:
           ACCOUNT_ID: ${{ steps.accounts_smoke_test.outputs.account_id }}
         run: |
           node -e "
-          import('./api/_lib/db.js').then(async ({ query }) => {
+          import('./lib/db.js').then(async ({ query }) => {
             const accountId = process.env.ACCOUNT_ID;
             if (accountId) {
               await query('DELETE FROM audit_log WHERE entity_id = \$1', [accountId]);

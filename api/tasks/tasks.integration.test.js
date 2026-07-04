@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { query } from '../_lib/db.js'
+import { query } from '../../lib/db.js'
 import listCreateHandler from './index.js'
 import singleHandler from './[id].js'
 

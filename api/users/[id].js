@@ -1,5 +1,5 @@
-import { withAuth } from '../_lib/auth.js'
-import { query } from '../_lib/db.js'
+import { withAuth } from '../../lib/auth.js'
+import { query } from '../../lib/db.js'
 
 export default withAuth(async (req, res, user) => {
   if (req.method !== 'PATCH') {

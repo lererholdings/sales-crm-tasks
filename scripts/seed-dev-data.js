@@ -1,5 +1,5 @@
-import { query } from '../api/_lib/db.js'
-import { logFieldChanges, toCreatedChanges } from '../api/_lib/audit.js'
+import { query } from '../lib/db.js'
+import { logFieldChanges, toCreatedChanges } from '../lib/audit.js'
 
 // Same hard guard as reset-dev-db.js — see docs/operations.md.
 const DEV_PROJECT_REF = 'mtloxubtjinllxaenavu'

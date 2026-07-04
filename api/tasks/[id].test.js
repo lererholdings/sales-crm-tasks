@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const queryMock = vi.fn()
-vi.mock('../_lib/db.js', () => ({ query: (...args) => queryMock(...args) }))
+vi.mock('../../lib/db.js', () => ({ query: (...args) => queryMock(...args) }))
 
 const verifyTokenMock = vi.fn()
 vi.mock('@clerk/backend', () => ({

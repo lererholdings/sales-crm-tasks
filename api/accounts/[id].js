@@ -1,6 +1,6 @@
-import { withAuth } from '../_lib/auth.js'
-import { query } from '../_lib/db.js'
-import { logFieldChanges } from '../_lib/audit.js'
+import { withAuth } from '../../lib/auth.js'
+import { query } from '../../lib/db.js'
+import { logFieldChanges } from '../../lib/audit.js'
 
 function toAccount(row) {
   return {

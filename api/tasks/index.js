@@ -1,6 +1,6 @@
-import { withAuth } from '../_lib/auth.js'
-import { withAudit } from '../_lib/audit.js'
-import { query } from '../_lib/db.js'
+import { withAuth } from '../../lib/auth.js'
+import { withAudit } from '../../lib/audit.js'
+import { query } from '../../lib/db.js'
 import {
   TASK_AUDIT_FIELDS,
   TASK_BASE_SELECT,
@@ -8,7 +8,7 @@ import {
   VALID_STATUSES,
   attachNotes,
   toTask,
-} from '../_lib/tasks.js'
+} from '../../lib/tasks.js'
 
 // Allowlisted so sort_by (a raw query param) can never be interpolated
 // directly into SQL — anything not in this map falls back to the default.

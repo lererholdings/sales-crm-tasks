@@ -1,5 +1,5 @@
 import { createInterface } from 'node:readline/promises'
-import { query } from '../api/_lib/db.js'
+import { query } from '../lib/db.js'
 
 // Hard structural guard, not just a warning: refuses to run against
 // anything but the dev Supabase project (see docs/operations.md). This is

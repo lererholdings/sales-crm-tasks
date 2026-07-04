@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, it } from 'vitest'
-import { query } from '../_lib/db.js'
+import { query } from '../../lib/db.js'
 import getUsersHandler from './index.js'
 import patchUserHandler from './[id].js'
 
 // Hits the real dev database and the real handlers end to end via the test
-// auth bypass — see api/_lib/auth.js and design.md section 12 ("Test auth
+// auth bypass — see lib/auth.js and design.md section 12 ("Test auth
 // bypass"). Skipped entirely if the required secrets aren't present, so a
 // plain `npm test` (or a contributor without dev DB access) never trips
 // over these; run explicitly via `npm run test:integration`.
