@@ -25,10 +25,10 @@ jobs:
         run: npm install
 
       - name: Run api/ tests
-        run: npm test
+        run: npm test -- --reporter=default --reporter=json --outputFile=unit-results.json
 
       - name: Run integration tests (real dev DB, test auth bypass)
-        run: npm run test:integration
+        run: npm run test:integration -- --reporter=default --reporter=json --outputFile=integration-results.json
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TEST_AUTH_BYPASS_SECRET: ${{ secrets.TEST_AUTH_BYPASS_SECRET }}
@@ -37,10 +37,24 @@ jobs:
         run: npm --prefix frontend install
 
       - name: Run frontend tests
-        run: npm --prefix frontend run test
+        run: npm --prefix frontend run test -- --reporter=default --reporter=json --outputFile=frontend-results.json
 
       - name: Build frontend
         run: npm --prefix frontend run build
+
+      # Renders a markdown table at the top of the run page so pass/fail is
+      # visible at a glance — useful for milestones with no UI to eyeball in
+      # a browser. Runs even if an earlier step failed, so you still get a
+      # readable picture of how far the run got.
+      - name: Write test summary
+        if: always()
+        run: |
+          echo "## Test summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Suite | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          node scripts/ci-test-summary.mjs "Unit tests (api/, lib/)" unit-results.json >> "$GITHUB_STEP_SUMMARY"
+          node scripts/ci-test-summary.mjs "Integration tests (real dev DB)" integration-results.json >> "$GITHUB_STEP_SUMMARY"
+          node scripts/ci-test-summary.mjs "Frontend tests" frontend/frontend-results.json >> "$GITHUB_STEP_SUMMARY"
 
   verify-preview-deployment:
     name: Verify live preview deployment
@@ -84,6 +98,7 @@ jobs:
       # bypass, so TEST_AUTH_BYPASS_SECRET must also be set in Vercel's
       # Preview environment (never Production) for this to pass.
       - name: Smoke test the live preview — static route (GET /api/users)
+        id: static_smoke_test
         env:
           PREVIEW_URL: ${{ steps.preview.outputs.url }}
           VERCEL_PROTECTION_BYPASS_SECRET: ${{ secrets.VERCEL_PROTECTION_BYPASS_SECRET }}
@@ -172,3 +187,13 @@ jobs:
             process.exit(0);
           }).catch((e) => { console.error(e); process.exit(1); });
           "
+
+      - name: Write live-preview smoke test summary
+        if: always()
+        run: |
+          echo "## Live preview smoke tests" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Preview deployment reachable | ${{ steps.preview.outcome == 'success' && '✅ passed' || steps.preview.outcome == 'skipped' && '⚠️ skipped' || '❌ failed' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Static route (GET /api/users) | ${{ steps.static_smoke_test.outcome == 'success' && '✅ passed' || steps.static_smoke_test.outcome == 'skipped' && '⚠️ skipped' || '❌ failed' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dynamic route (POST/GET/PATCH /api/accounts/:id) | ${{ steps.accounts_smoke_test.outcome == 'success' && '✅ passed' || steps.accounts_smoke_test.outcome == 'skipped' && '⚠️ skipped' || '❌ failed' }} |" >> "$GITHUB_STEP_SUMMARY"

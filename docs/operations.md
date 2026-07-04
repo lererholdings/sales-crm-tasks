@@ -69,6 +69,9 @@ Living index, grouped by target milestone — **check this section at the start 
 - [#9](https://github.com/lererholdings/sales-crm-tasks/issues/9) — Accounts list ACV column + per-user column visibility/order
 - [#10](https://github.com/lererholdings/sales-crm-tasks/issues/10) — No UI planned for admins to view soft-deleted tasks (needs a UI-level test when built, not just Milestone 4's API-level one)
 
+**Milestone 9 — Hardening and edge cases**
+- [#11](https://github.com/lererholdings/sales-crm-tasks/issues/11) — Spike: evaluate Kinde or Auth0 as an alternative to Clerk (throwaway branch, adopt only on a clear win)
+
 **Milestone 10 — Deployment and go-live**
 - [#1](https://github.com/lererholdings/sales-crm-tasks/issues/1) — Clerk sole access gate
 - [#3](https://github.com/lererholdings/sales-crm-tasks/issues/3) — Prod admin seeding
