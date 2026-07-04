@@ -10,6 +10,8 @@ where to find/rotate them.
 
 Update this as new infrastructure gets added each milestone.
 
+_Milestone 4 branch note: this specific edit is a real (non-empty) markdown-only diff, used to verify the Vercel Ignored Build Step correctly cancels Preview builds too, not just direct pushes to `main` (an empty commit isn't a valid test of this — it trivially skips regardless of the exclude patterns actually working)._
+
 ---
 
 ## Accounts & projects
