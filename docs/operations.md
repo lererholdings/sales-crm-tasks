@@ -68,6 +68,7 @@ Living index, grouped by target milestone — **check this section at the start 
 **Milestone 6 — Filters, sorting, and column preferences**
 - [#7](https://github.com/lererholdings/sales-crm-tasks/issues/7) — Accounts list sortable columns + per-column filtering
 - [#9](https://github.com/lererholdings/sales-crm-tasks/issues/9) — Accounts list ACV column + per-user column visibility/order
+- [#10](https://github.com/lererholdings/sales-crm-tasks/issues/10) — No UI planned for admins to view soft-deleted tasks (needs a UI-level test when built, not just Milestone 4's API-level one)
 
 **Milestone 10 — Deployment and go-live**
 - [#1](https://github.com/lererholdings/sales-crm-tasks/issues/1) — Clerk sole access gate
