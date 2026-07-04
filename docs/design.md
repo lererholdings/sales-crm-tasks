@@ -1033,7 +1033,7 @@ _Goal: full task CRUD available, testable via Postman_
 
 **Checkpoint ✅**
 - Full task lifecycle works via API: create → read → update → soft delete
-- Deleted tasks invisible to members, visible to admins via `?include_deleted=true`
+- Deleted tasks invisible to members, retrievable by admins via `?include_deleted=true` — **API-level only, no UI yet** (see [issue #10](https://github.com/lererholdings/sales-crm-tasks/issues/10) — no UI is planned anywhere in the spec to actually use this until Milestone 6)
 - Audit log has entries for every mutation
 - Task types seed data visible via `GET /api/task-types`
 - CI is green
