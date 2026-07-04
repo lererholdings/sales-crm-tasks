@@ -10,6 +10,8 @@ where to find/rotate them.
 
 Update this as new infrastructure gets added each milestone.
 
+_Milestone 4 branch note: this specific edit is a real (non-empty) markdown-only diff, used to verify the Vercel Ignored Build Step correctly cancels Preview builds too, not just direct pushes to `main` (an empty commit isn't a valid test of this — it trivially skips regardless of the exclude patterns actually working)._
+
 ---
 
 ## Accounts & projects
@@ -59,9 +61,6 @@ Mirror `design.md`'s Milestone 1–10 titles exactly (created 2026-07-02, Milest
 
 Living index, grouped by target milestone — **check this section at the start and end of every milestone**, and update it immediately whenever an issue is filed/closed/retagged. Unlike other doc updates, this section is *not* gated by the "docs land with the next milestone's commits" workflow rule — it's a standing checklist, not narrative content tied to a specific milestone's own work.
 
-**Milestone 4 — Tasks API**
-- [#6](https://github.com/lererholdings/sales-crm-tasks/issues/6) — Skip Vercel redeploy for non-code changes (blocked on locating "Ignored Build Step" in the Vercel dashboard)
-
 **Milestone 5 — Core task UI**
 - [#5](https://github.com/lererholdings/sales-crm-tasks/issues/5) — Archive/delete accounts + suggest-restore on similar create (blocked on tasks existing)
 
@@ -70,15 +69,20 @@ Living index, grouped by target milestone — **check this section at the start 
 - [#9](https://github.com/lererholdings/sales-crm-tasks/issues/9) — Accounts list ACV column + per-user column visibility/order
 - [#10](https://github.com/lererholdings/sales-crm-tasks/issues/10) — No UI planned for admins to view soft-deleted tasks (needs a UI-level test when built, not just Milestone 4's API-level one)
 
+**Milestone 9 — Hardening and edge cases**
+- [#11](https://github.com/lererholdings/sales-crm-tasks/issues/11) — Spike: evaluate Kinde or Auth0 as an alternative to Clerk (throwaway branch, adopt only on a clear win)
+
 **Milestone 10 — Deployment and go-live**
 - [#1](https://github.com/lererholdings/sales-crm-tasks/issues/1) — Clerk sole access gate
 - [#3](https://github.com/lererholdings/sales-crm-tasks/issues/3) — Prod admin seeding
 
 **Unscheduled**
 - [#2](https://github.com/lererholdings/sales-crm-tasks/issues/2) — Display name sync via JWT claims
+- [#12](https://github.com/lererholdings/sales-crm-tasks/issues/12) — Post CI test summary as a PR comment, not just the Actions run page
 
 **Recently closed**
 - [#4](https://github.com/lererholdings/sales-crm-tasks/issues/4) — Skip CI for markdown-only changes (fixed in Milestone 3, `paths-ignore` on `**.md` + `docs/mockups/**`). **Known limitation, accepted as-is**: only skips for direct pushes to a branch with no open PR — once a PR exists, the same markdown-only commit still triggers a `pull_request: synchronize` run that isn't skipped (`paths-ignore` evaluates differently for that event, likely against the PR's cumulative diff rather than the latest commit). Verified both cases directly. Decision: docs-only commits within an open PR will still run CI — not pursuing a further fix.
+- [#6](https://github.com/lererholdings/sales-crm-tasks/issues/6) — Skip Vercel redeploy for non-code changes. Fixed under Settings → Build and Deployment → Ignored Build Step → Custom: `git diff --quiet HEAD^ HEAD -- . ':(glob,exclude)**/*.md' ':(exclude)docs/mockups/**'`. Verified on a direct push to `main` — commit status shows "Canceled by Ignored Build Step". Caveat: a canceled build still counts against deployment quota/concurrent build slots, unlike CI's paths-ignore which skips the run entirely. Not yet verified whether this also cancels correctly for Preview builds on a branch with an open PR — check next time we're mid-PR, given the analogous GitHub Actions quirk (#4).
 
 ## Database
 

@@ -1,0 +1,11 @@
+# Test files are never meant to be deployed as functions — excluding them
+# explicitly removes any ambiguity about whether Vercel's per-deployment
+# Function count (see docs/design.md section 12, Hobby plan limit of 12)
+# might include them, and shrinks the upload.
+api/**/*.test.js
+api/**/*.integration.test.js
+lib/**/*.test.js
+
+# Not part of the deployed app at all.
+scripts/
+docs/

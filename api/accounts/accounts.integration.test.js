@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, it } from 'vitest'
-import { query } from '../_lib/db.js'
+import { query } from '../../lib/db.js'
 import listCreateHandler from './index.js'
 import singleHandler from './[id].js'
 
 // Same pattern as api/users/users.integration.test.js — real dev DB, real
-// handlers, authenticated via the test auth bypass (see api/_lib/auth.js).
+// handlers, authenticated via the test auth bypass (see lib/auth.js).
 const hasEnv = Boolean(process.env.DATABASE_URL) && Boolean(process.env.TEST_AUTH_BYPASS_SECRET)
 const bypassSecret = process.env.TEST_AUTH_BYPASS_SECRET
 const runId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
