@@ -59,9 +59,6 @@ Mirror `design.md`'s Milestone 1–10 titles exactly (created 2026-07-02, Milest
 
 Living index, grouped by target milestone — **check this section at the start and end of every milestone**, and update it immediately whenever an issue is filed/closed/retagged. Unlike other doc updates, this section is *not* gated by the "docs land with the next milestone's commits" workflow rule — it's a standing checklist, not narrative content tied to a specific milestone's own work.
 
-**Milestone 4 — Tasks API**
-- [#6](https://github.com/lererholdings/sales-crm-tasks/issues/6) — Skip Vercel redeploy for non-code changes (blocked on locating "Ignored Build Step" in the Vercel dashboard)
-
 **Milestone 5 — Core task UI**
 - [#5](https://github.com/lererholdings/sales-crm-tasks/issues/5) — Archive/delete accounts + suggest-restore on similar create (blocked on tasks existing)
 
@@ -79,6 +76,7 @@ Living index, grouped by target milestone — **check this section at the start 
 
 **Recently closed**
 - [#4](https://github.com/lererholdings/sales-crm-tasks/issues/4) — Skip CI for markdown-only changes (fixed in Milestone 3, `paths-ignore` on `**.md` + `docs/mockups/**`). **Known limitation, accepted as-is**: only skips for direct pushes to a branch with no open PR — once a PR exists, the same markdown-only commit still triggers a `pull_request: synchronize` run that isn't skipped (`paths-ignore` evaluates differently for that event, likely against the PR's cumulative diff rather than the latest commit). Verified both cases directly. Decision: docs-only commits within an open PR will still run CI — not pursuing a further fix.
+- [#6](https://github.com/lererholdings/sales-crm-tasks/issues/6) — Skip Vercel redeploy for non-code changes. Fixed under Settings → Build and Deployment → Ignored Build Step → Custom: `git diff --quiet HEAD^ HEAD -- . ':(glob,exclude)**/*.md' ':(exclude)docs/mockups/**'`. Verified on a direct push to `main` — commit status shows "Canceled by Ignored Build Step". Caveat: a canceled build still counts against deployment quota/concurrent build slots, unlike CI's paths-ignore which skips the run entirely. Not yet verified whether this also cancels correctly for Preview builds on a branch with an open PR — check next time we're mid-PR, given the analogous GitHub Actions quirk (#4).
 
 ## Database
 
