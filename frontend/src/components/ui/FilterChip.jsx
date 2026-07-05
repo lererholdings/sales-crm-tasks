@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { CHIP_ACTIVE_CLASSES, CHIP_IDLE_CLASSES } from '../../lib/chipStyles.js'
 
-// Three modes, matching what GET /api/tasks accepts per param:
-// - 'select' (default): exact-match filter (assignee_id, task_type_id) —
-//   dropdown list of options, single choice, closes on pick, "Clear" entry.
-// - 'multi': status/priority accept a comma-separated list matched with
-//   `IN (...)` server-side — checkboxes, dropdown stays open across picks,
-//   "Clear all" entry. `value` is an array; `onChange` receives the next
-//   array (never null — an empty array means "no filter").
-// - 'text': substring filter (partner_name is matched with ILIKE on the
-//   server) — a small debounced text input instead of a fixed option list.
+// Three modes, matching how a filter param is typically matched server-side:
+// - 'select' (default): exact-match filter — dropdown list of options,
+//   single choice, closes on pick, "Clear" entry.
+// - 'multi': accepts a comma-separated list matched with `IN (...)`
+//   server-side — checkboxes, dropdown stays open across picks, "Clear
+//   all" entry. `value` is an array; `onChange` receives the next array
+//   (never null — an empty array means "no filter").
+// - 'text': substring filter (matched with ILIKE server-side) — a small
+//   debounced text input instead of a fixed option list.
 export default function FilterChip({ icon, label, options = [], value, onChange, mode = 'select' }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -29,7 +29,7 @@ export default function FilterChip({ icon, label, options = [], value, onChange,
     return () => document.removeEventListener('click', handleClick)
   }, [open])
 
-  // Debounced so typing a partner name doesn't fire a request per keystroke.
+  // Debounced so typing doesn't fire a request per keystroke.
   useEffect(() => {
     if (mode !== 'text' || !open) return undefined
     const trimmed = text.trim()

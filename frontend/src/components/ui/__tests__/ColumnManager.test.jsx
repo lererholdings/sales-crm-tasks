@@ -1,18 +1,25 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import ColumnManager from '../ColumnManager.jsx'
-import { DEFAULT_COLUMN_ORDER } from '../../../lib/columns.js'
+import { CONFIGURABLE_COLUMNS, DEFAULT_COLUMN_ORDER, normalizeTaskColumnOrder } from '../../../lib/columns.js'
+
+function renderColumnManager(props = {}) {
+  return render(
+    <ColumnManager
+      columns={CONFIGURABLE_COLUMNS}
+      normalizeOrder={normalizeTaskColumnOrder}
+      columnOrder={DEFAULT_COLUMN_ORDER}
+      columnVisibility={{}}
+      onReorder={vi.fn()}
+      onToggleVisibility={vi.fn()}
+      {...props}
+    />,
+  )
+}
 
 describe('ColumnManager', () => {
   it('opens the popover and lists every configurable column in order', () => {
-    render(
-      <ColumnManager
-        columnOrder={DEFAULT_COLUMN_ORDER}
-        columnVisibility={{}}
-        onReorder={vi.fn()}
-        onToggleVisibility={vi.fn()}
-      />,
-    )
+    renderColumnManager()
 
     fireEvent.click(screen.getByLabelText('Manage columns'))
 
@@ -22,14 +29,7 @@ describe('ColumnManager', () => {
 
   it('toggles a column off by unchecking it', () => {
     const onToggleVisibility = vi.fn()
-    render(
-      <ColumnManager
-        columnOrder={DEFAULT_COLUMN_ORDER}
-        columnVisibility={{}}
-        onReorder={vi.fn()}
-        onToggleVisibility={onToggleVisibility}
-      />,
-    )
+    renderColumnManager({ onToggleVisibility })
 
     fireEvent.click(screen.getByLabelText('Manage columns'))
     fireEvent.click(screen.getByRole('checkbox', { name: 'Priority' }))
@@ -39,14 +39,7 @@ describe('ColumnManager', () => {
 
   it('toggles an already-hidden column back on', () => {
     const onToggleVisibility = vi.fn()
-    render(
-      <ColumnManager
-        columnOrder={DEFAULT_COLUMN_ORDER}
-        columnVisibility={{ priority: false }}
-        onReorder={vi.fn()}
-        onToggleVisibility={onToggleVisibility}
-      />,
-    )
+    renderColumnManager({ columnVisibility: { priority: false }, onToggleVisibility })
 
     fireEvent.click(screen.getByLabelText('Manage columns'))
     fireEvent.click(screen.getByRole('checkbox', { name: 'Priority' }))
@@ -56,14 +49,7 @@ describe('ColumnManager', () => {
 
   it('reorders columns via drag and drop, moving the dragged column to the target position', () => {
     const onReorder = vi.fn()
-    render(
-      <ColumnManager
-        columnOrder={DEFAULT_COLUMN_ORDER}
-        columnVisibility={{}}
-        onReorder={onReorder}
-        onToggleVisibility={vi.fn()}
-      />,
-    )
+    renderColumnManager({ onReorder })
 
     fireEvent.click(screen.getByLabelText('Manage columns'))
 
@@ -78,19 +64,36 @@ describe('ColumnManager', () => {
 
   it('does nothing when a column is dropped on itself', () => {
     const onReorder = vi.fn()
-    render(
-      <ColumnManager
-        columnOrder={DEFAULT_COLUMN_ORDER}
-        columnVisibility={{}}
-        onReorder={onReorder}
-        onToggleVisibility={vi.fn()}
-      />,
-    )
+    renderColumnManager({ onReorder })
 
     fireEvent.click(screen.getByLabelText('Manage columns'))
     fireEvent.dragStart(screen.getByRole('listitem', { name: 'Type' }))
     fireEvent.drop(screen.getByRole('listitem', { name: 'Type' }))
 
     expect(onReorder).not.toHaveBeenCalled()
+  })
+
+  it('works with a different resource\'s column config (e.g. accounts)', async () => {
+    const { CONFIGURABLE_ACCOUNT_COLUMNS, DEFAULT_ACCOUNT_COLUMN_ORDER, normalizeAccountColumnOrder } = await import(
+      '../../../lib/accountColumns.js'
+    )
+    const onToggleVisibility = vi.fn()
+    render(
+      <ColumnManager
+        columns={CONFIGURABLE_ACCOUNT_COLUMNS}
+        normalizeOrder={normalizeAccountColumnOrder}
+        columnOrder={DEFAULT_ACCOUNT_COLUMN_ORDER}
+        columnVisibility={{ acv: false }}
+        onReorder={vi.fn()}
+        onToggleVisibility={onToggleVisibility}
+      />,
+    )
+
+    fireEvent.click(screen.getByLabelText('Manage columns'))
+    expect(screen.getByText('Country')).toBeTruthy()
+    expect(screen.getByText('ACV')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'ACV' }))
+    expect(onToggleVisibility).toHaveBeenCalledWith(expect.objectContaining({ acv: true }))
   })
 })

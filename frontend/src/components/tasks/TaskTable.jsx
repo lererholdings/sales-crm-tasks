@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useMemo, useState } from 'react'
 import { groupTasks } from '../../lib/groupTasks.js'
-import { DEFAULT_COLUMN_ORDER, TASK_NAME_COLUMN, getVisibleOrderedColumns } from '../../lib/columns.js'
+import { DEFAULT_COLUMN_ORDER, TASK_NAME_COLUMN, getVisibleOrderedTaskColumns } from '../../lib/columns.js'
 import TaskGroupHeader from './TaskGroupHeader.jsx'
 import TaskRow from './TaskRow.jsx'
 
@@ -51,7 +51,7 @@ export default function TaskTable({
   // group) so it doesn't defeat TaskRow's React.memo the way a fresh array
   // every render would.
   const visibleColumns = useMemo(
-    () => getVisibleOrderedColumns(columnOrder, columnVisibility),
+    () => getVisibleOrderedTaskColumns(columnOrder, columnVisibility),
     [columnOrder, columnVisibility],
   )
 

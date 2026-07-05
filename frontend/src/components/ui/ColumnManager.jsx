@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { CONFIGURABLE_COLUMNS, normalizeColumnOrder } from '../../lib/columns.js'
 
+// columns: this resource's CONFIGURABLE_* list (e.g. lib/columns.js's
+// CONFIGURABLE_COLUMNS or lib/accountColumns.js's CONFIGURABLE_ACCOUNT_COLUMNS).
+// normalizeOrder: the matching normalize*ColumnOrder function, so a stored
+// order missing a newer column (or naming a removed one) still resolves to
+// a complete, valid list.
+//
 // Drag state lives in this component (not the browser's DataTransfer API) —
 // we never read/write e.dataTransfer, so there's nothing jsdom needs to
 // support for the interaction to be testable with plain fireEvent calls.
-export default function ColumnManager({ columnOrder, columnVisibility, onReorder, onToggleVisibility }) {
+export default function ColumnManager({ columns, normalizeOrder, columnOrder, columnVisibility, onReorder, onToggleVisibility }) {
   const [open, setOpen] = useState(false)
   const [dragKey, setDragKey] = useState(null)
   const ref = useRef(null)
@@ -18,8 +23,8 @@ export default function ColumnManager({ columnOrder, columnVisibility, onReorder
     return () => document.removeEventListener('click', handleClick)
   }, [open])
 
-  const orderedKeys = normalizeColumnOrder(columnOrder)
-  const orderedColumns = orderedKeys.map((key) => CONFIGURABLE_COLUMNS.find((c) => c.key === key)).filter(Boolean)
+  const orderedKeys = normalizeOrder(columnOrder)
+  const orderedColumns = orderedKeys.map((key) => columns.find((c) => c.key === key)).filter(Boolean)
 
   const handleDrop = (targetKey) => {
     if (!dragKey || dragKey === targetKey) {

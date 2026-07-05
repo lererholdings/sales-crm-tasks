@@ -148,7 +148,7 @@ tasks
 |---|---|---|
 | id | UUID PK | |
 | name | TEXT | |
-| country | TEXT | Required. Not searchable via API — display only |
+| country | TEXT | Required. Filterable via `GET /api/accounts?country=` (added post-Milestone-3, issue #7) |
 | acv | NUMERIC(15,2) | Annual Contract Value. Patchable. History via audit_log |
 | sfdc_account_url | TEXT | Opens in new tab |
 | last_updated_by | UUID FK → users | |
@@ -387,6 +387,8 @@ List all accounts.
 
 **Query params:**
 - `search` — filter by name (partial match)
+- `country` — filter by country (partial match) — added post-Milestone-3, see [issue #7](https://github.com/lererholdings/sales-crm-tasks/issues/7). Supersedes the original "country — not searchable" note in the schema table.
+- `sort_by` / `sort_dir` — `name` (default), `country`, `acv`, `updated_at`; `asc` (default) or `desc`. Archived accounts always sort last regardless.
 - `include=acv` — include ACV in response (omitted by default)
 
 **Response:**
