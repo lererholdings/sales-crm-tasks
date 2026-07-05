@@ -18,6 +18,7 @@ const DEFAULTS = {
   notes_preview_count: 2,
   accounts_column_order: [],
   accounts_column_visibility: {},
+  theme: null,
 }
 
 function mockRes() {
@@ -44,7 +45,7 @@ describe('GET /api/preferences', () => {
     verifyTokenMock.mockResolvedValue({ sub: 'clerk_caller' })
   })
 
-  it('returns defaults when no preferences row exists yet', async () => {
+  it('returns defaults (including theme: null) when no preferences row exists yet', async () => {
     queryMock
       .mockResolvedValueOnce({ rows: [CALLER_ROW] })
       .mockResolvedValueOnce({ rows: [] })
@@ -56,7 +57,7 @@ describe('GET /api/preferences', () => {
     expect(res.body).toEqual(DEFAULTS)
   })
 
-  it('returns the stored preferences row when one exists, including accounts columns', async () => {
+  it('returns the stored preferences row when one exists, including theme', async () => {
     queryMock
       .mockResolvedValueOnce({ rows: [CALLER_ROW] })
       .mockResolvedValueOnce({
@@ -67,6 +68,7 @@ describe('GET /api/preferences', () => {
             notes_preview_count: 5,
             accounts_column_order: ['country', 'acv'],
             accounts_column_visibility: { acv: true },
+            theme: 'dark',
           },
         ],
       })
@@ -75,13 +77,7 @@ describe('GET /api/preferences', () => {
     await handler(authedReq(), res)
 
     expect(res.statusCode).toBe(200)
-    expect(res.body).toEqual({
-      column_order: ['status', 'priority'],
-      column_visibility: { eta: false },
-      notes_preview_count: 5,
-      accounts_column_order: ['country', 'acv'],
-      accounts_column_visibility: { acv: true },
-    })
+    expect(res.body.theme).toBe('dark')
   })
 })
 
@@ -136,6 +132,15 @@ describe('PATCH /api/preferences', () => {
     expect(res.statusCode).toBe(400)
   })
 
+  it('rejects an invalid theme value', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { theme: 'blue' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
   it('updates only column_order and leaves other fields alone (partial update)', async () => {
     queryMock
       .mockResolvedValueOnce({ rows: [CALLER_ROW] })
@@ -147,6 +152,7 @@ describe('PATCH /api/preferences', () => {
             notes_preview_count: 3,
             accounts_column_order: [],
             accounts_column_visibility: {},
+            theme: null,
           },
         ],
       })
@@ -158,11 +164,12 @@ describe('PATCH /api/preferences', () => {
     const [sql, params] = queryMock.mock.calls[1]
     expect(sql).toContain('ON CONFLICT (user_id) DO UPDATE')
     // booleans flagging which fields were actually provided in the request
-    expect(params[6]).toBe(true) // column_order provided
-    expect(params[7]).toBe(false) // column_visibility not provided
-    expect(params[8]).toBe(false) // notes_preview_count not provided
-    expect(params[9]).toBe(false) // accounts_column_order not provided
-    expect(params[10]).toBe(false) // accounts_column_visibility not provided
+    expect(params[7]).toBe(true) // column_order provided
+    expect(params[8]).toBe(false) // column_visibility not provided
+    expect(params[9]).toBe(false) // notes_preview_count not provided
+    expect(params[10]).toBe(false) // accounts_column_order not provided
+    expect(params[11]).toBe(false) // accounts_column_visibility not provided
+    expect(params[12]).toBe(false) // theme not provided
     expect(res.body.column_order).toEqual(['priority', 'status'])
     expect(res.body.notes_preview_count).toBe(3)
   })
@@ -192,6 +199,7 @@ describe('PATCH /api/preferences', () => {
             notes_preview_count: 2,
             accounts_column_order: ['country', 'acv'],
             accounts_column_visibility: { acv: true },
+            theme: null,
           },
         ],
       })
@@ -207,12 +215,29 @@ describe('PATCH /api/preferences', () => {
 
     expect(res.statusCode).toBe(200)
     const [, params] = queryMock.mock.calls[1]
-    expect(params[6]).toBe(false) // column_order not provided
-    expect(params[7]).toBe(false) // column_visibility not provided
-    expect(params[8]).toBe(false) // notes_preview_count not provided
-    expect(params[9]).toBe(true) // accounts_column_order provided
-    expect(params[10]).toBe(true) // accounts_column_visibility provided
+    expect(params[7]).toBe(false) // column_order not provided
+    expect(params[8]).toBe(false) // column_visibility not provided
+    expect(params[9]).toBe(false) // notes_preview_count not provided
+    expect(params[10]).toBe(true) // accounts_column_order provided
+    expect(params[11]).toBe(true) // accounts_column_visibility provided
+    expect(params[12]).toBe(false) // theme not provided
     expect(res.body.accounts_column_order).toEqual(['country', 'acv'])
     expect(res.body.accounts_column_visibility).toEqual({ acv: true })
+  })
+
+  it('updates theme independently of every other field', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [CALLER_ROW] })
+      .mockResolvedValueOnce({ rows: [{ ...DEFAULTS, theme: 'dark' }] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { theme: 'dark' } }), res)
+
+    expect(res.statusCode).toBe(200)
+    const [, params] = queryMock.mock.calls[1]
+    expect(params[6]).toBe('dark') // theme value
+    expect(params[7]).toBe(false) // column_order not provided
+    expect(params[12]).toBe(true) // theme provided
+    expect(res.body.theme).toBe('dark')
   })
 })

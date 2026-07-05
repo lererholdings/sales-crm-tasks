@@ -50,6 +50,8 @@ CREATE TYPE external_source AS ENUM (
   'sfdc'
 );
 
+CREATE TYPE theme_preference AS ENUM ('light', 'dark');
+
 -- ============================================================
 -- USERS
 -- Clerk handles auth — we store only the reference ID.
@@ -210,7 +212,8 @@ CREATE TABLE user_preferences (
   column_visibility           JSONB   NOT NULL DEFAULT '{}',   -- { column_key: true/false }
   notes_preview_count         INT     NOT NULL DEFAULT 2,      -- how many notes shown in inline preview
   accounts_column_order       JSONB   NOT NULL DEFAULT '[]',   -- same shape as column_order, for the accounts list
-  accounts_column_visibility  JSONB   NOT NULL DEFAULT '{}'
+  accounts_column_visibility  JSONB   NOT NULL DEFAULT '{}',
+  theme                       theme_preference                -- null = no saved preference, use OS setting
 );
 
 -- ============================================================
