@@ -61,10 +61,9 @@ Mirror `design.md`'s Milestone 1–10 titles exactly (created 2026-07-02, Milest
 
 Living index, grouped by target milestone — **check this section at the start and end of every milestone**, and update it immediately whenever an issue is filed/closed/retagged. Unlike other doc updates, this section is *not* gated by the "docs land with the next milestone's commits" workflow rule — it's a standing checklist, not narrative content tied to a specific milestone's own work.
 
-**Milestone 6 — Filters, sorting, and column preferences**
-- [#7](https://github.com/lererholdings/sales-crm-tasks/issues/7) — Accounts list sortable columns + per-column filtering
-- [#9](https://github.com/lererholdings/sales-crm-tasks/issues/9) — Accounts list ACV column + per-user column visibility/order
-- [#10](https://github.com/lererholdings/sales-crm-tasks/issues/10) — No UI planned for admins to view soft-deleted tasks (needs a UI-level test when built, not just Milestone 4's API-level one)
+**Milestone 6 — Filters, sorting, and column preferences (shipped in PR #17; accounts-page follow-up still open)**
+- [#7](https://github.com/lererholdings/sales-crm-tasks/issues/7) — Accounts list sortable columns + per-column filtering. In progress on `accounts-list-parity`.
+- [#9](https://github.com/lererholdings/sales-crm-tasks/issues/9) — Accounts list ACV column + per-user column visibility/order. In progress on `accounts-list-parity`.
 
 **Milestone 9 — Hardening and edge cases**
 - [#11](https://github.com/lererholdings/sales-crm-tasks/issues/11) — Spike: evaluate Kinde or Auth0 as an alternative to Clerk (throwaway branch, adopt only on a clear win)
@@ -80,6 +79,7 @@ Living index, grouped by target milestone — **check this section at the start 
 - [#15](https://github.com/lererholdings/sales-crm-tasks/issues/15) — Suggest restoring a similar archived account on new-account create (issue #5 part 2 — has its own open fuzzy-match design question)
 
 **Recently closed**
+- [#10](https://github.com/lererholdings/sales-crm-tasks/issues/10) — No UI planned for admins to view soft-deleted tasks. Shipped in Milestone 6 (PR #17): admin-only "Show deleted" toggle in the task toolbar, wired to `?include_deleted=true`; deleted tasks show a `(deleted)` tag and dimmed row (matches the archived-account convention). UI-level test coverage added (admin-only visibility, toggle behavior).
 - [#5](https://github.com/lererholdings/sales-crm-tasks/issues/5) — Archive/delete accounts with no active tasks, suggest restoring on similar create. **Part 1 shipped in Milestone 5**: admin-only `DELETE /api/accounts/:id`, blocked when the account has an active (non-done, non-deleted) task; archived accounts stay visible everywhere — greyed out, sorted last — rather than hidden by default (a deliberate deviation from tasks' hide-by-default soft delete). New migration `20260705000534_accounts_soft_delete.sql` adds `accounts.deleted_at`/`deleted_by`. Part 2 (suggest-restore) split into its own issue: #15.
 - [#4](https://github.com/lererholdings/sales-crm-tasks/issues/4) — Skip CI for markdown-only changes (fixed in Milestone 3, `paths-ignore` on `**.md` + `docs/mockups/**`). **Known limitation, accepted as-is**: only skips for direct pushes to a branch with no open PR — once a PR exists, the same markdown-only commit still triggers a `pull_request: synchronize` run that isn't skipped (`paths-ignore` evaluates differently for that event, likely against the PR's cumulative diff rather than the latest commit). Verified both cases directly. Decision: docs-only commits within an open PR will still run CI — not pursuing a further fix.
 - [#6](https://github.com/lererholdings/sales-crm-tasks/issues/6) — Skip Vercel redeploy for non-code changes. Fixed under Settings → Build and Deployment → Ignored Build Step → Custom: `git diff --quiet HEAD^ HEAD -- . ':(glob,exclude)**/*.md' ':(exclude)docs/mockups/**'`. Verified on a direct push to `main` — commit status shows "Canceled by Ignored Build Step". Caveat: a canceled build still counts against deployment quota/concurrent build slots, unlike CI's paths-ignore which skips the run entirely. Not yet verified whether this also cancels correctly for Preview builds on a branch with an open PR — check next time we're mid-PR, given the analogous GitHub Actions quirk (#4).
