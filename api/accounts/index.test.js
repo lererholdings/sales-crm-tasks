@@ -100,6 +100,40 @@ describe('GET /api/accounts', () => {
     const [, params] = queryMock.mock.calls[1]
     expect(params[0]).toBe('Acme')
   })
+
+  it('filters by country', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] }).mockResolvedValueOnce({ rows: [] })
+
+    const res = mockRes()
+    await handler(authedReq({ query: { country: 'Australia' } }), res)
+
+    expect(res.statusCode).toBe(200)
+    const [sql, params] = queryMock.mock.calls[1]
+    expect(sql).toContain("a.country ILIKE '%' || $2 || '%'")
+    expect(params).toEqual([null, 'Australia'])
+  })
+
+  it('sorts by an allowlisted column and direction, with archived always last', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] }).mockResolvedValueOnce({ rows: [] })
+
+    const res = mockRes()
+    await handler(authedReq({ query: { sort_by: 'acv', sort_dir: 'desc' } }), res)
+
+    expect(res.statusCode).toBe(200)
+    const [sql] = queryMock.mock.calls[1]
+    expect(sql).toContain('ORDER BY (a.deleted_at IS NOT NULL), a.acv DESC')
+  })
+
+  it('falls back to the default sort column for an unrecognized sort_by (never interpolates raw input)', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] }).mockResolvedValueOnce({ rows: [] })
+
+    const res = mockRes()
+    await handler(authedReq({ query: { sort_by: 'DROP TABLE accounts;--' } }), res)
+
+    expect(res.statusCode).toBe(200)
+    const [sql] = queryMock.mock.calls[1]
+    expect(sql).toContain('ORDER BY (a.deleted_at IS NOT NULL), a.name ASC')
+  })
 })
 
 describe('POST /api/accounts', () => {

@@ -79,7 +79,13 @@ CREATE TABLE accounts (
   sfdc_account_url  TEXT,                         -- opens in new tab on the client
   last_updated_by   UUID        REFERENCES users(id) ON DELETE SET NULL,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  -- Soft delete (archive) — issue #5. Unlike tasks, archived accounts are
+  -- NOT hidden by default: they stay visible everywhere (sorted last,
+  -- greyed out in the UI) rather than filtered out of list queries.
+  deleted_at        TIMESTAMPTZ,                   -- null = active
+  deleted_by        UUID        REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -199,10 +205,12 @@ CREATE INDEX idx_task_notes_deleted_at ON task_notes(deleted_at);
 -- ============================================================
 
 CREATE TABLE user_preferences (
-  user_id              UUID    PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  column_order         JSONB   NOT NULL DEFAULT '[]',   -- ordered list of column keys
-  column_visibility    JSONB   NOT NULL DEFAULT '{}',   -- { column_key: true/false }
-  notes_preview_count  INT     NOT NULL DEFAULT 2       -- how many notes shown in inline preview
+  user_id                     UUID    PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  column_order                JSONB   NOT NULL DEFAULT '[]',   -- ordered list of task column keys
+  column_visibility           JSONB   NOT NULL DEFAULT '{}',   -- { column_key: true/false }
+  notes_preview_count         INT     NOT NULL DEFAULT 2,      -- how many notes shown in inline preview
+  accounts_column_order       JSONB   NOT NULL DEFAULT '[]',   -- same shape as column_order, for the accounts list
+  accounts_column_visibility  JSONB   NOT NULL DEFAULT '{}'
 );
 
 -- ============================================================

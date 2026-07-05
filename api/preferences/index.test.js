@@ -12,6 +12,13 @@ vi.mock('@clerk/backend', () => ({
 const handler = (await import('./index.js')).default
 
 const CALLER_ROW = { id: 'caller-id', role: 'member', display_name: 'Caller', email: 'c@x.com' }
+const DEFAULTS = {
+  column_order: [],
+  column_visibility: {},
+  notes_preview_count: 2,
+  accounts_column_order: [],
+  accounts_column_visibility: {},
+}
 
 function mockRes() {
   return {
@@ -46,14 +53,22 @@ describe('GET /api/preferences', () => {
     await handler(authedReq(), res)
 
     expect(res.statusCode).toBe(200)
-    expect(res.body).toEqual({ column_order: [], column_visibility: {}, notes_preview_count: 2 })
+    expect(res.body).toEqual(DEFAULTS)
   })
 
-  it('returns the stored preferences row when one exists', async () => {
+  it('returns the stored preferences row when one exists, including accounts columns', async () => {
     queryMock
       .mockResolvedValueOnce({ rows: [CALLER_ROW] })
       .mockResolvedValueOnce({
-        rows: [{ column_order: ['status', 'priority'], column_visibility: { eta: false }, notes_preview_count: 5 }],
+        rows: [
+          {
+            column_order: ['status', 'priority'],
+            column_visibility: { eta: false },
+            notes_preview_count: 5,
+            accounts_column_order: ['country', 'acv'],
+            accounts_column_visibility: { acv: true },
+          },
+        ],
       })
 
     const res = mockRes()
@@ -64,6 +79,8 @@ describe('GET /api/preferences', () => {
       column_order: ['status', 'priority'],
       column_visibility: { eta: false },
       notes_preview_count: 5,
+      accounts_column_order: ['country', 'acv'],
+      accounts_column_visibility: { acv: true },
     })
   })
 })
@@ -101,11 +118,37 @@ describe('PATCH /api/preferences', () => {
     expect(res.statusCode).toBe(400)
   })
 
+  it('rejects a non-array accounts_column_order', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { accounts_column_order: 'country' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a non-object accounts_column_visibility', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { accounts_column_visibility: ['acv'] } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
   it('updates only column_order and leaves other fields alone (partial update)', async () => {
     queryMock
       .mockResolvedValueOnce({ rows: [CALLER_ROW] })
       .mockResolvedValueOnce({
-        rows: [{ column_order: ['priority', 'status'], column_visibility: { eta: false }, notes_preview_count: 3 }],
+        rows: [
+          {
+            column_order: ['priority', 'status'],
+            column_visibility: { eta: false },
+            notes_preview_count: 3,
+            accounts_column_order: [],
+            accounts_column_visibility: {},
+          },
+        ],
       })
 
     const res = mockRes()
@@ -115,9 +158,11 @@ describe('PATCH /api/preferences', () => {
     const [sql, params] = queryMock.mock.calls[1]
     expect(sql).toContain('ON CONFLICT (user_id) DO UPDATE')
     // booleans flagging which fields were actually provided in the request
-    expect(params[4]).toBe(true) // column_order provided
-    expect(params[5]).toBe(false) // column_visibility not provided
-    expect(params[6]).toBe(false) // notes_preview_count not provided
+    expect(params[6]).toBe(true) // column_order provided
+    expect(params[7]).toBe(false) // column_visibility not provided
+    expect(params[8]).toBe(false) // notes_preview_count not provided
+    expect(params[9]).toBe(false) // accounts_column_order not provided
+    expect(params[10]).toBe(false) // accounts_column_visibility not provided
     expect(res.body.column_order).toEqual(['priority', 'status'])
     expect(res.body.notes_preview_count).toBe(3)
   })
@@ -126,7 +171,7 @@ describe('PATCH /api/preferences', () => {
     queryMock
       .mockResolvedValueOnce({ rows: [CALLER_ROW] })
       .mockResolvedValueOnce({
-        rows: [{ column_order: [], column_visibility: {}, notes_preview_count: 4 }],
+        rows: [{ ...DEFAULTS, notes_preview_count: 4 }],
       })
 
     const res = mockRes()
@@ -134,5 +179,40 @@ describe('PATCH /api/preferences', () => {
 
     expect(res.statusCode).toBe(200)
     expect(res.body.notes_preview_count).toBe(4)
+  })
+
+  it('updates accounts_column_order and accounts_column_visibility independently of the task columns', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [CALLER_ROW] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            column_order: [],
+            column_visibility: {},
+            notes_preview_count: 2,
+            accounts_column_order: ['country', 'acv'],
+            accounts_column_visibility: { acv: true },
+          },
+        ],
+      })
+
+    const res = mockRes()
+    await handler(
+      authedReq({
+        method: 'PATCH',
+        body: { accounts_column_order: ['country', 'acv'], accounts_column_visibility: { acv: true } },
+      }),
+      res,
+    )
+
+    expect(res.statusCode).toBe(200)
+    const [, params] = queryMock.mock.calls[1]
+    expect(params[6]).toBe(false) // column_order not provided
+    expect(params[7]).toBe(false) // column_visibility not provided
+    expect(params[8]).toBe(false) // notes_preview_count not provided
+    expect(params[9]).toBe(true) // accounts_column_order provided
+    expect(params[10]).toBe(true) // accounts_column_visibility provided
+    expect(res.body.accounts_column_order).toEqual(['country', 'acv'])
+    expect(res.body.accounts_column_visibility).toEqual({ acv: true })
   })
 })

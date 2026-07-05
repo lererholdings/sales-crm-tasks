@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react'
 const DEBOUNCE_MS = 300
 
 // Debounced so free text search fires one request after the user pauses
-// typing, not one per keystroke. `value` stays externally controlled
-// (TasksPage's filters.search) — this only delays when onChange fires.
-export default function SearchInput({ value, onChange }) {
+// typing, not one per keystroke. `value` stays externally controlled by the
+// caller (e.g. TasksPage/AccountsPage's filters.search) — this only delays
+// when onChange fires.
+export default function SearchInput({ value, onChange, placeholder = 'Search tasks, accounts, notes…' }) {
   const [text, setText] = useState(value ?? '')
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export default function SearchInput({ value, onChange }) {
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Search tasks, accounts, notes…"
+        placeholder={placeholder}
         className="w-full bg-transparent text-[13px] text-text-primary outline-none"
       />
     </div>

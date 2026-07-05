@@ -1,10 +1,11 @@
 import { useCurrentUser } from '../../hooks/useCurrentUser.js'
 import { useTaskTypes } from '../../hooks/useTaskTypes.js'
 import { useUsers } from '../../hooks/useUsers.js'
+import { CONFIGURABLE_COLUMNS, normalizeTaskColumnOrder } from '../../lib/columns.js'
 import { PRIORITY_LABELS, STATUS_LABELS, TASK_PRIORITIES, TASK_STATUSES } from '../../lib/constants.js'
-import ColumnManager from './ColumnManager.jsx'
-import FilterChip from './FilterChip.jsx'
-import SearchInput from './SearchInput.jsx'
+import ColumnManager from '../ui/ColumnManager.jsx'
+import FilterChip from '../ui/FilterChip.jsx'
+import SearchInput from '../ui/SearchInput.jsx'
 import ShowDeletedToggle from './ShowDeletedToggle.jsx'
 
 const STATUS_OPTIONS = TASK_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] }))
@@ -32,6 +33,8 @@ export default function TaskToolbar({ filters, onFilterChange, preferences, onRe
         <ShowDeletedToggle active={Boolean(filters.include_deleted)} onToggle={(value) => setFilter('include_deleted')(value || undefined)} />
       )}
       <ColumnManager
+        columns={CONFIGURABLE_COLUMNS}
+        normalizeOrder={normalizeTaskColumnOrder}
         columnOrder={preferences.column_order}
         columnVisibility={preferences.column_visibility}
         onReorder={onReorderColumns}

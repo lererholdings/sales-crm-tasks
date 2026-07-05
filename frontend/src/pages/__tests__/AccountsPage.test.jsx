@@ -69,6 +69,32 @@ describe('AccountsPage', () => {
     })
   })
 
+  it('re-fetches with sort_by/sort_dir when a sortable column header is clicked', async () => {
+    mockFetchByUrl({
+      '/api/accounts': [
+        {
+          id: 'a1',
+          name: 'Acme Corp',
+          country: 'Australia',
+          sfdc_account_url: null,
+          last_updated_by: null,
+          updated_at: '2026-06-15T10:00:00Z',
+          deleted_at: null,
+        },
+      ],
+    })
+
+    render(<AccountsPage />)
+    await waitFor(() => expect(screen.getByText('Acme Corp')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('columnheader', { name: 'Country' }))
+
+    await waitFor(() => {
+      const sortCall = global.fetch.mock.calls.find(([url]) => url === '/api/accounts?sort_by=country&sort_dir=asc')
+      expect(sortCall).toBeDefined()
+    })
+  })
+
   it('opens the new account modal', async () => {
     mockFetchByUrl({ '/api/accounts': [] })
 

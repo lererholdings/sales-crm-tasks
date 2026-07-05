@@ -2,6 +2,15 @@ import { withAuth } from '../../lib/auth.js'
 import { query } from '../../lib/db.js'
 import { logFieldChanges, toCreatedChanges } from '../../lib/audit.js'
 
+// Allowlisted so sort_by (a raw query param) can never be interpolated
+// directly into SQL — anything not in this map falls back to the default.
+const SORTABLE_COLUMNS = {
+  name: 'a.name',
+  country: 'a.country',
+  acv: 'a.acv',
+  updated_at: 'a.updated_at',
+}
+
 function toAccount(row, { includeAcv }) {
   const account = {
     id: row.id,
@@ -23,19 +32,24 @@ function toAccount(row, { includeAcv }) {
 export default withAuth(async (req, res, user) => {
   if (req.method === 'GET') {
     const search = typeof req.query.search === 'string' ? req.query.search : null
+    const country = typeof req.query.country === 'string' ? req.query.country : null
     const includeAcv = req.query.include === 'acv'
+    const sortColumn = SORTABLE_COLUMNS[req.query.sort_by] ?? 'a.name'
+    const sortDir = req.query.sort_dir === 'desc' ? 'DESC' : 'ASC'
 
     // Archived accounts are intentionally NOT filtered out here — issue #5:
-    // they still show up (sorted last), the frontend just greys them out
-    // with an "archived" label, unlike tasks' hide-by-default soft delete.
+    // they still show up (sorted last regardless of the chosen sort column),
+    // the frontend just greys them out with an "archived" label, unlike
+    // tasks' hide-by-default soft delete.
     const { rows } = await query(
       `SELECT a.id, a.name, a.country, a.sfdc_account_url, a.acv, a.updated_at, a.deleted_at,
               u.id AS updated_by_id, u.display_name AS updated_by_name
        FROM accounts a
        LEFT JOIN users u ON u.id = a.last_updated_by
        WHERE ($1::text IS NULL OR a.name ILIKE '%' || $1 || '%')
-       ORDER BY (a.deleted_at IS NOT NULL), a.name`,
-      [search],
+         AND ($2::text IS NULL OR a.country ILIKE '%' || $2 || '%')
+       ORDER BY (a.deleted_at IS NOT NULL), ${sortColumn} ${sortDir}`,
+      [search, country],
     )
     return res.status(200).json(rows.map((row) => toAccount(row, { includeAcv })))
   }

@@ -1,3 +1,5 @@
+import { getVisibleOrderedColumns, normalizeColumnOrder } from './columnUtils.js'
+
 // Mirrors design.md's task table column list. task_name is always the first
 // column — it hosts TaskNameCell's context menu, so unlike the rest it isn't
 // hideable or reorderable.
@@ -16,18 +18,10 @@ export const CONFIGURABLE_COLUMNS = [
 
 export const DEFAULT_COLUMN_ORDER = CONFIGURABLE_COLUMNS.map((c) => c.key)
 
-// Drops keys no longer configurable and appends any configurable column
-// missing from a stored order (e.g. one added after the user last saved
-// their preferences), so ColumnManager always has a complete, valid list.
-export function normalizeColumnOrder(order) {
-  const known = new Set(DEFAULT_COLUMN_ORDER)
-  const valid = (order ?? []).filter((key) => known.has(key))
-  const missing = DEFAULT_COLUMN_ORDER.filter((key) => !valid.includes(key))
-  return [...valid, ...missing]
+export function normalizeTaskColumnOrder(order) {
+  return normalizeColumnOrder(order, DEFAULT_COLUMN_ORDER)
 }
 
-export function getVisibleOrderedColumns(order, visibility) {
-  return normalizeColumnOrder(order)
-    .map((key) => CONFIGURABLE_COLUMNS.find((c) => c.key === key))
-    .filter((col) => col && visibility[col.key] !== false)
+export function getVisibleOrderedTaskColumns(order, visibility) {
+  return getVisibleOrderedColumns(order, visibility, CONFIGURABLE_COLUMNS, DEFAULT_COLUMN_ORDER)
 }
