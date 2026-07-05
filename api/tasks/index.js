@@ -44,14 +44,26 @@ async function handleGet(req, res, user) {
     conditions.push(`t.assignee_id = $${params.length}`)
   }
   if (q.status) {
-    if (!VALID_STATUSES.includes(q.status)) return res.status(400).json({ error: 'Invalid status' })
-    params.push(q.status)
-    conditions.push(`t.status = $${params.length}`)
+    const statuses = q.status.split(',').filter(Boolean)
+    if (statuses.length === 0 || statuses.some((s) => !VALID_STATUSES.includes(s))) {
+      return res.status(400).json({ error: 'Invalid status' })
+    }
+    const placeholders = statuses.map((s) => {
+      params.push(s)
+      return `$${params.length}`
+    })
+    conditions.push(`t.status IN (${placeholders.join(', ')})`)
   }
   if (q.priority) {
-    if (!VALID_PRIORITIES.includes(q.priority)) return res.status(400).json({ error: 'Invalid priority' })
-    params.push(q.priority)
-    conditions.push(`t.priority = $${params.length}`)
+    const priorities = q.priority.split(',').filter(Boolean)
+    if (priorities.length === 0 || priorities.some((p) => !VALID_PRIORITIES.includes(p))) {
+      return res.status(400).json({ error: 'Invalid priority' })
+    }
+    const placeholders = priorities.map((p) => {
+      params.push(p)
+      return `$${params.length}`
+    })
+    conditions.push(`t.priority IN (${placeholders.join(', ')})`)
   }
   if (q.task_type_id) {
     params.push(q.task_type_id)

@@ -1,9 +1,9 @@
 import { memo } from 'react'
 
-function TaskGroupHeader({ groupKey, label, isPartnerOnly, count, collapsed, onToggle }) {
+function TaskGroupHeader({ groupKey, label, isPartnerOnly, count, collapsed, columnCount = 9, onToggle }) {
   return (
     <tr className="cursor-pointer border-y border-group-border bg-group-bg" onClick={() => onToggle(groupKey)}>
-      <td colSpan={8} className="px-3 py-1.5">
+      <td colSpan={columnCount} className="px-3 py-1.5">
         <div className="flex items-center gap-2 text-[12px] font-medium text-group-text">
           <i className={`ti ${collapsed ? 'ti-chevron-right' : 'ti-chevron-down'}`} />
           {label}

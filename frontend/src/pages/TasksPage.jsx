@@ -1,17 +1,35 @@
 import { useCallback, useState } from 'react'
+import { usePreferences } from '../hooks/usePreferences.js'
 import { useTasks } from '../hooks/useTasks.js'
 import { useApiClient } from '../lib/apiClient.js'
+import { TASK_STATUSES } from '../lib/constants.js'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import NewTaskModal from '../components/tasks/NewTaskModal.jsx'
 import TaskSidePanel from '../components/tasks/TaskSidePanel.jsx'
 import TaskTable from '../components/tasks/TaskTable.jsx'
+import TaskToolbar from '../components/tasks/TaskToolbar.jsx'
+
+// Done tasks are hidden on first load — completed work isn't the thing
+// you're triaging day to day. Still fully visible/toggleable via the
+// Status filter chip, this only sets the starting selection.
+const DEFAULT_STATUS_FILTER = TASK_STATUSES.filter((status) => status !== 'done')
 
 export default function TasksPage() {
-  const { tasks, loading, error, refresh, updateTaskInPlace } = useTasks()
+  const [filters, setFilters] = useState({ status: DEFAULT_STATUS_FILTER, sort_by: undefined, sort_dir: undefined })
+  const { tasks, loading, error, refresh, updateTaskInPlace } = useTasks(filters)
+  const { preferences, updatePreferences } = usePreferences()
   const apiClient = useApiClient()
   const [showNewModal, setShowNewModal] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [taskPendingDelete, setTaskPendingDelete] = useState(null)
+
+  const handleSort = useCallback((sortKey) => {
+    setFilters((prev) => ({
+      ...prev,
+      sort_by: sortKey,
+      sort_dir: prev.sort_by === sortKey && prev.sort_dir === 'asc' ? 'desc' : 'asc',
+    }))
+  }, [])
 
   const handleCreate = async (payload) => {
     await apiClient.post('/tasks', payload)
@@ -55,16 +73,14 @@ export default function TasksPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-border bg-bg-surface p-3">
-        <div className="flex-1" />
-        <button
-          type="button"
-          onClick={() => setShowNewModal(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent-strong px-3 py-1.5 text-[13px] font-medium text-white"
-        >
-          <i className="ti ti-plus" /> New task
-        </button>
-      </div>
+      <TaskToolbar
+        filters={filters}
+        onFilterChange={setFilters}
+        preferences={preferences}
+        onReorderColumns={(column_order) => updatePreferences({ column_order })}
+        onToggleColumnVisibility={(column_visibility) => updatePreferences({ column_visibility })}
+        onNewTask={() => setShowNewModal(true)}
+      />
 
       <div className="flex-1 overflow-auto">
         {loading && <p className="p-6 text-sm text-text-secondary">Loading…</p>}
@@ -75,6 +91,11 @@ export default function TasksPage() {
             onOpen={handleOpen}
             onDuplicate={handleDuplicate}
             onDeleteRequest={handleDeleteRequest}
+            columnOrder={preferences.column_order}
+            columnVisibility={preferences.column_visibility}
+            sortBy={filters.sort_by}
+            sortDir={filters.sort_dir}
+            onSort={handleSort}
           />
         )}
       </div>

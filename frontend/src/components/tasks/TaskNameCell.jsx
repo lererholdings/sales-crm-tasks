@@ -21,6 +21,7 @@ export default function TaskNameCell({ task, onOpen, onDuplicate, onDeleteReques
       >
         {task.task_name}
       </button>
+      {task.deleted_at && <span className="text-[11px] font-normal text-text-muted">(deleted)</span>}
       <button
         type="button"
         aria-label="Task actions"

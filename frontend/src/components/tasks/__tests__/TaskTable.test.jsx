@@ -67,6 +67,96 @@ describe('TaskTable', () => {
     expect(onOpen).toHaveBeenCalledWith(tasks[0])
   })
 
+  it('marks a soft-deleted task with a "(deleted)" tag and dims the row', () => {
+    render(
+      <TaskTable
+        tasks={[task({ deleted_at: '2026-07-01T00:00:00Z' })]}
+        onOpen={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDeleteRequest={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('(deleted)')).toBeTruthy()
+    const row = screen.getByText('RFP response').closest('tr')
+    expect(row.className).toContain('opacity-60')
+  })
+
+  it('does not tag or dim an active task', () => {
+    render(<TaskTable tasks={[task()]} onOpen={vi.fn()} onDuplicate={vi.fn()} onDeleteRequest={vi.fn()} />)
+
+    expect(screen.queryByText('(deleted)')).toBeFalsy()
+    const row = screen.getByText('RFP response').closest('tr')
+    expect(row.className).not.toContain('opacity-60')
+  })
+
+  it('calls onSort with the backend sort key when a sortable header is clicked', () => {
+    const onSort = vi.fn()
+    render(<TaskTable tasks={[task()]} onOpen={vi.fn()} onDuplicate={vi.fn()} onDeleteRequest={vi.fn()} onSort={onSort} />)
+
+    fireEvent.click(screen.getByText('Priority'))
+
+    expect(onSort).toHaveBeenCalledWith('priority')
+  })
+
+  it('does not attach a sort handler to a non-sortable column header', () => {
+    const onSort = vi.fn()
+    render(<TaskTable tasks={[task()]} onOpen={vi.fn()} onDuplicate={vi.fn()} onDeleteRequest={vi.fn()} onSort={onSort} />)
+
+    fireEvent.click(screen.getByText('Notes'))
+
+    expect(onSort).not.toHaveBeenCalled()
+  })
+
+  it('shows a sort direction indicator only on the active sort column', () => {
+    render(
+      <TaskTable
+        tasks={[task()]}
+        onOpen={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDeleteRequest={vi.fn()}
+        sortBy="priority"
+        sortDir="desc"
+      />,
+    )
+
+    const priorityHeader = screen.getByText('Priority').closest('th')
+    expect(priorityHeader.querySelector('.ti-arrow-down')).toBeTruthy()
+    const statusHeader = screen.getByText('Status').closest('th')
+    expect(statusHeader.querySelector('.ti-arrow-down')).toBeFalsy()
+  })
+
+  it('hides a column when columnVisibility marks it false', () => {
+    render(
+      <TaskTable
+        tasks={[task()]}
+        onOpen={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDeleteRequest={vi.fn()}
+        columnVisibility={{ priority: false }}
+      />,
+    )
+
+    expect(screen.queryByText('Priority')).toBeFalsy()
+    expect(screen.getByText('Status')).toBeTruthy()
+  })
+
+  it('renders columns in the order given by columnOrder', () => {
+    render(
+      <TaskTable
+        tasks={[task()]}
+        onOpen={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDeleteRequest={vi.fn()}
+        columnOrder={['status', 'type', 'assignee', 'next_action', 'priority', 'eta', 'notes_preview', 'last_updated']}
+      />,
+    )
+
+    const headers = screen.getAllByRole('columnheader').map((th) => th.textContent)
+    expect(headers[1]).toBe('Status')
+    expect(headers[2]).toBe('Type')
+  })
+
   // Regression guard: TaskRow/TaskGroupHeader are wrapped in React.memo so
   // updating one task in place (hooks/useTasks.js's updateTaskInPlace)
   // only re-renders that row, not the whole table. This only works because

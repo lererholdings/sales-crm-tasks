@@ -1095,11 +1095,16 @@ _Goal: the toolbar is fully functional_
 7. Apply sort on column header click (sort_by + sort_dir params)
 8. Tests: `GET /api/tasks` filter param combinations (status, assignee, priority, type, partner, search, sort_by/sort_dir), preferences endpoints (partial-update semantics), `ColumnManager` reorder/toggle interaction test
 
+**Also bundled into this milestone** (per [issue #10](https://github.com/lererholdings/sales-crm-tasks/issues/10), tagged to Milestone 6 since it's the same filter-UI infrastructure): an admin-only "Show deleted" toggle in the toolbar, wiring the already-existing `?include_deleted=true` API param (Milestone 4) to the task table for the first time. Deleted tasks render with a `(deleted)` tag and dimmed row, matching the existing archived-account convention (see [issue #5](https://github.com/lererholdings/sales-crm-tasks/issues/5)'s decision log entry) rather than inventing a new visual pattern. Members never see the control; the backend 403s them regardless if attempted directly.
+
+**Revised per review before merge:** Status and Priority became multi-select (checkboxes, `IN (...)` server-side instead of `=`) rather than single-value — day-to-day triage usually means "show me backlog + in progress + waiting," not one status at a time. The Status filter also now defaults to every status except Done on first load (still just a starting selection — fully visible/togglable via the chip), since completed work isn't what you're triaging.
+
 **Checkpoint ✅**
 - Filtering by status, assignee, priority, type, partner all work
 - Free text search filters the table in real time
 - Column show/hide and reorder persists across browser refresh and devices
 - Sorting by any column works
+- Admins can toggle visibility of soft-deleted tasks; members never see the control or the tasks
 - CI is green
 
 ---
@@ -1267,6 +1272,8 @@ Visual mockups are saved as standalone interactive HTML files in `docs/mockups/`
 | Context menu | ⋯ button on row hover | Keeps the table clean. All task actions (edit, duplicate, delete, link to account) live in the context menu rather than cluttering the row or notes column. |
 | UI theme | Emerald/green palette, Clerk-style typography, dark mode | Navbar: `#085041`. Accents: `#1D9E75`. Group headers: `#9FE1CB`. Avatars: green and blue only. Task names: soft green. Selected row: gray bg + green left border. Dark mode toggle in navbar; also respects OS preference. Dark surfaces: `#1a1f1e` / `#222927`. |
 | Access gate ownership | Clerk is the sole access gate; Vercel Deployment Protection restricted to "Only Preview Deployments" | Avoids running two overlapping auth systems in production. Vercel protection is useful for previews (keeps in-progress work private) but must not gate production once real users need to log in via Clerk. See [issue #1](https://github.com/lererholdings/sales-crm-tasks/issues/1). |
+| Task column reorder/toggle scope | `task_name` excluded from `ColumnManager` — always first, never hidden | It hosts `TaskNameCell`'s context menu (edit/duplicate/delete/link-to-account); hiding it would hide those actions with no replacement affordance. The other 8 columns are fully reorderable and toggleable per the spec. |
+| Partner filter chip | Free-text input, not a dropdown of exact values | `GET /api/tasks`'s `partner_name` param is matched with `ILIKE '%...%'` (substring), not `=` — there's no partners table to source an exact option list from, and a text filter matches the backend's actual matching semantics. |
 | User scale ambition | Architecture should not assume a hard ceiling of ~5 users | Team is ~5 today, but avoid decisions that make later growth expensive: keep list endpoints paginated/indexed rather than fetch-all, keep Clerk/Supabase on tiers with headroom (Clerk free tier supports up to 10,000 MAU), and revisit rate limiting + `audit_log` retention in Milestone 9 with growth in mind, not just current volume. Not a reason to over-engineer now — just don't paint into a corner. |
 | Database access pattern | Direct Postgres via the `pg` driver against a pooled connection string, not `@supabase/supabase-js` | Matches the stated migration goal in section 4 — moving off Supabase later means changing `DATABASE_URL`, not rewriting every query to drop `.from()`/PostgREST calls. Vercel functions are serverless/short-lived, so `DATABASE_URL` must be the Transaction pooler string (port 6543, Supavisor/pgbouncer), not the direct :5432 connection — direct connections exhaust Postgres's connection cap under serverless concurrency. |
 | Environment separation | Two Supabase projects: one for dev/preview, one for production | Set up in Milestone 2 rather than deferred, since no real data existed yet — the cheapest point to do this. Mirrors the Vercel Preview/Production split already in place. `DATABASE_URL` is scoped per-environment in Vercel; migrations are pushed to both projects (`supabase link --project-ref <ref>` per project, no single persistent link). |

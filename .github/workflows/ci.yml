@@ -71,21 +71,30 @@ jobs:
       - name: Install root dependencies
         run: npm install
 
-      # Vercel preview URLs follow https://<project>-git-<branch>-<scope>.vercel.app
-      # for branch names that are already lowercase/hyphenated (our convention).
-      # If that ever stops matching, switch to polling the GitHub Deployments
-      # API for this commit's deployment_status instead of guessing the URL.
+      # Resolved via the GitHub Deployments API rather than constructed from
+      # the branch name — Vercel truncates + appends a short hash to the
+      # generated alias once <project>-git-<branch>-<scope> would exceed the
+      # 63-char DNS label limit (hit for the first time by
+      # milestone-6-filters-sorting-columns), so string-guessing the URL is
+      # not reliable for longer branch names.
       - name: Wait for the preview deployment to be live
         id: preview
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          BRANCH_SLUG=$(echo "${{ github.head_ref || github.ref_name }}" | tr '[:upper:]_' '[:lower:]-' | tr -cd 'a-z0-9-')
-          URL="https://sales-crm-tasks-git-${BRANCH_SLUG}-lerers-projects.vercel.app"
-          echo "Polling $URL"
+          SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          echo "Looking up the Preview deployment for $SHA"
           for i in $(seq 1 30); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "x-vercel-protection-bypass: ${{ secrets.VERCEL_PROTECTION_BYPASS_SECRET }}" "$URL/api/health")
-            if [ "$CODE" = "200" ]; then
-              echo "url=$URL" >> "$GITHUB_OUTPUT"
-              exit 0
+            DEPLOYMENT_ID=$(gh api "repos/${{ github.repository }}/deployments?sha=$SHA&environment=Preview" --jq '.[0].id // empty')
+            if [ -n "$DEPLOYMENT_ID" ]; then
+              URL=$(gh api "repos/${{ github.repository }}/deployments/$DEPLOYMENT_ID/statuses" --jq '[.[] | select(.state == "success")][0].environment_url // empty')
+              if [ -n "$URL" ]; then
+                CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "x-vercel-protection-bypass: ${{ secrets.VERCEL_PROTECTION_BYPASS_SECRET }}" "$URL/api/health")
+                if [ "$CODE" = "200" ]; then
+                  echo "url=$URL" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+              fi
             fi
             sleep 10
           done
