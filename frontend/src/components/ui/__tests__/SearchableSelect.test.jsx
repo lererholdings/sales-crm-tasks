@@ -1,6 +1,20 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
 import SearchableSelect from '../SearchableSelect.jsx'
+
+function mockTriggerRect(rect) {
+  return vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    x: rect.left,
+    y: rect.top,
+    width: rect.width,
+    height: rect.bottom - rect.top,
+    top: rect.top,
+    bottom: rect.bottom,
+    left: rect.left,
+    right: rect.left + rect.width,
+    toJSON: () => {},
+  })
+}
 
 const OPTIONS = [
   { value: 'a1', label: 'Acme Corp' },
@@ -56,6 +70,36 @@ describe('SearchableSelect', () => {
     const dropdownInput = screen.getByPlaceholderText('Type to filter…')
     expect(container.contains(dropdownInput)).toBe(false)
     expect(document.body.contains(dropdownInput)).toBe(true)
+  })
+
+  describe('smart placement', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('opens downward when there is enough room below the trigger', () => {
+      Object.defineProperty(window, 'innerHeight', { value: 800, configurable: true })
+      mockTriggerRect({ top: 100, bottom: 130, left: 10, width: 200 })
+
+      render(<SearchableSelect options={OPTIONS} value="" onChange={vi.fn()} />)
+      fireEvent.click(screen.getByRole('button'))
+
+      const dropdown = screen.getByPlaceholderText('Type to filter…').parentElement
+      expect(dropdown.style.top).not.toBe('')
+      expect(dropdown.style.bottom).toBe('')
+    })
+
+    it('opens upward when there is not enough room below the trigger', () => {
+      Object.defineProperty(window, 'innerHeight', { value: 400, configurable: true })
+      mockTriggerRect({ top: 350, bottom: 380, left: 10, width: 200 })
+
+      render(<SearchableSelect options={OPTIONS} value="" onChange={vi.fn()} />)
+      fireEvent.click(screen.getByRole('button'))
+
+      const dropdown = screen.getByPlaceholderText('Type to filter…').parentElement
+      expect(dropdown.style.bottom).not.toBe('')
+      expect(dropdown.style.top).toBe('')
+    })
   })
 
   it('closes the dropdown when clicking outside', () => {

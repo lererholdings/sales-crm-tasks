@@ -14,6 +14,13 @@ import { createPortal } from 'react-dom'
 // dropdown silently grow the modal and force a scroll instead of floating
 // on top of it. Closes on scroll of anything (rather than repositioning)
 // since these are short-lived popovers, not persistent overlays.
+// Rough height of the dropdown (filter input + up to max-h-48 option list +
+// borders) — used to decide whether there's enough room below the trigger
+// before opening downward. We can't measure the real height ahead of the
+// portal's first paint, and re-measuring after paint would cause a visible
+// jump, so an estimate that's a bit generous is the simpler tradeoff.
+const ESTIMATED_DROPDOWN_HEIGHT = 240
+
 export default function SearchableSelect({ options, value, onChange, placeholder = 'Select…', disabled = false }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -23,7 +30,16 @@ export default function SearchableSelect({ options, value, onChange, placeholder
 
   const openDropdown = () => {
     const rect = buttonRef.current.getBoundingClientRect()
-    setPosition({ top: rect.bottom, left: rect.left, width: rect.width })
+    const spaceBelow = window.innerHeight - rect.bottom
+    // Anchoring with `bottom` instead of `top` when flipped means the
+    // dropdown grows upward from the trigger without needing to know its
+    // exact rendered height in advance.
+    const openUpward = spaceBelow < ESTIMATED_DROPDOWN_HEIGHT && rect.top > spaceBelow
+    setPosition({
+      left: rect.left,
+      width: rect.width,
+      ...(openUpward ? { bottom: window.innerHeight - rect.top } : { top: rect.bottom }),
+    })
     setOpen(true)
   }
 
@@ -66,8 +82,13 @@ export default function SearchableSelect({ options, value, onChange, placeholder
         createPortal(
           <div
             ref={dropdownRef}
-            style={{ position: 'fixed', top: position.top, left: position.left, width: position.width }}
-            className="z-50 mt-1 rounded-lg border border-border-mid bg-bg-surface shadow-xl"
+            style={{
+              position: 'fixed',
+              left: position.left,
+              width: position.width,
+              ...(position.bottom !== undefined ? { bottom: position.bottom } : { top: position.top }),
+            }}
+            className={`z-50 rounded-lg border border-border-mid bg-bg-surface shadow-xl ${position.bottom !== undefined ? 'mb-1' : 'mt-1'}`}
           >
             <input
               autoFocus

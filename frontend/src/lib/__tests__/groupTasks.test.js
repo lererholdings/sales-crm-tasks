@@ -76,4 +76,49 @@ describe('groupTasks', () => {
 
     expect(groups.map((g) => g.label)).toEqual(['BetaCo', 'Acme Corp'])
   })
+
+  // Regression test: an account can produce two different groups (with vs
+  // without a partner). Per review feedback, both should stay adjacent
+  // rather than getting scattered wherever each combination first appears
+  // relative to an unrelated account's group in between.
+  it('keeps all of one account\'s groups adjacent even when another account\'s group appears in between', () => {
+    const tasks = [
+      task({ id: 't1', account: { id: 'a1', name: 'Acme Corp' }, partner_name: 'PartnerX' }),
+      task({ id: 't2', account: { id: 'a2', name: 'BetaCo' } }),
+      task({ id: 't3', account: { id: 'a1', name: 'Acme Corp' }, partner_name: null }),
+    ]
+    const groups = groupTasks(tasks)
+
+    expect(groups.map((g) => g.label)).toEqual(['Acme Corp — PartnerX', 'Acme Corp', 'BetaCo'])
+  })
+
+  it('clusters a third group for the same account right after the others, not at the end unrelated', () => {
+    const tasks = [
+      task({ id: 't1', account: { id: 'a1', name: 'Acme Corp' }, partner_name: 'PartnerX' }),
+      task({ id: 't2', account: { id: 'a2', name: 'BetaCo' } }),
+      task({ id: 't3', account: { id: 'a1', name: 'Acme Corp' }, partner_name: null }),
+      task({ id: 't4', account: { id: 'a3', name: 'Gamma Inc' } }),
+      task({ id: 't5', account: { id: 'a1', name: 'Acme Corp' }, partner_name: 'PartnerY' }),
+    ]
+    const groups = groupTasks(tasks)
+
+    expect(groups.map((g) => g.label)).toEqual([
+      'Acme Corp — PartnerX',
+      'Acme Corp',
+      'Acme Corp — PartnerY',
+      'BetaCo',
+      'Gamma Inc',
+    ])
+  })
+
+  it('does not cluster partner-only groups (no account to cluster by)', () => {
+    const tasks = [
+      task({ id: 't1', account: null, partner_name: 'PartnerZ' }),
+      task({ id: 't2', account: { id: 'a1', name: 'Acme Corp' } }),
+      task({ id: 't3', account: null, partner_name: 'PartnerZ' }),
+    ]
+    const groups = groupTasks(tasks)
+
+    expect(groups.map((g) => g.label)).toEqual(['PartnerZ', 'Acme Corp'])
+  })
 })
