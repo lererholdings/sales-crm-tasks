@@ -4,11 +4,15 @@ import { useCurrentUser } from '../../hooks/useCurrentUser.js'
 import { useTask } from '../../hooks/useTask.js'
 import { useTaskTypes } from '../../hooks/useTaskTypes.js'
 import { useUsers } from '../../hooks/useUsers.js'
+import { PRIORITY_LABELS, STATUS_LABELS, TASK_PRIORITIES, TASK_STATUSES } from '../../lib/constants.js'
 import PriorityBadge from '../ui/PriorityBadge.jsx'
 import SearchableSelect from '../ui/SearchableSelect.jsx'
 import SidePanel from '../ui/SidePanel.jsx'
 import StatusPill from '../ui/StatusPill.jsx'
 import NotesTimeline from './NotesTimeline.jsx'
+
+const STATUS_OPTIONS = TASK_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }))
+const PRIORITY_OPTIONS = TASK_PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABELS[p] }))
 
 export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, onUpdated, onNotesChanged }) {
   const { task, notes, notesTotal, loading, updateTask, loadMoreNotes, addNote, editNote } = useTask(taskId)
@@ -31,6 +35,8 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
       eta: task.eta ?? '',
       assignee_id: task.assignee?.id ?? '',
       next_action: task.next_action ?? '',
+      status: task.status,
+      priority: task.priority,
     })
   }, [task])
 
@@ -48,6 +54,8 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
         eta: form.eta || null,
         assignee_id: form.assignee_id,
         next_action: form.next_action || null,
+        status: form.status,
+        priority: form.priority,
       })
       onUpdated?.(updated)
     } catch (err) {
@@ -164,6 +172,24 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
 
           <div className="border-b border-border p-4">
             <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-text-muted">Task detail</p>
+            <div className="mb-2 grid grid-cols-2 gap-3">
+              <div>
+                <p className="mb-1 text-[12px] text-text-secondary">Status</p>
+                <SearchableSelect
+                  options={STATUS_OPTIONS}
+                  value={form.status}
+                  onChange={(v) => setForm({ ...form, status: v })}
+                />
+              </div>
+              <div>
+                <p className="mb-1 text-[12px] text-text-secondary">Priority</p>
+                <SearchableSelect
+                  options={PRIORITY_OPTIONS}
+                  value={form.priority}
+                  onChange={(v) => setForm({ ...form, priority: v })}
+                />
+              </div>
+            </div>
             <div className="mb-2">
               <SearchableSelect
                 options={taskTypeOptions}

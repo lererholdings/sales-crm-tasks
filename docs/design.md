@@ -1078,6 +1078,8 @@ _Goal: the main working view — task table with grouping and side panel_
 
 **Also bundled into this milestone** (per user request, not in the original task list above): issue #5 part 1 — admin-only account archiving with an active-task guard, archived accounts shown greyed out everywhere rather than hidden. See the decision log entries above for the archive UX and the `NewTaskModal` partner/distributor prefill.
 
+**Gap found and fixed via review, not deferred**: `TaskDetailBlock` in the original component tree never listed status/priority as editable, but the hooks section explicitly says `useTasks` should support "optimistic status/priority updates" — a task genuinely had no way to be marked done. Added Status and Priority as two more `SearchableSelect` fields in `TaskSidePanel`'s existing Task detail section, through the same Save flow as every other field there (not a separate optimistic/inline-edit pattern, which stays a possible fast-follow if a one-click table-row edit is wanted later). Also: `NewTaskModal`'s status dropdown excludes "Done" — a new task starting pre-closed isn't a sensible default.
+
 ---
 
 ### Milestone 6 — Filters, sorting, and column preferences

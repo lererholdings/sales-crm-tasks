@@ -41,7 +41,9 @@ export default function NewTaskModal({ tasks, onClose, onCreate }) {
   const taskTypeOptions = taskTypes.map((t) => ({ value: t.id, label: `${t.category} · ${t.name}` }))
   const userOptions = users.map((u) => ({ value: u.id, label: u.display_name }))
   const priorityOptions = TASK_PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABELS[p] }))
-  const statusOptions = TASK_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }))
+  // "Done" isn't a sensible starting status for a brand-new task — it's
+  // only reachable later by editing an existing task in TaskSidePanel.
+  const statusOptions = TASK_STATUSES.filter((s) => s !== 'done').map((s) => ({ value: s, label: STATUS_LABELS[s] }))
 
   const canSubmit = form.task_name.trim() && form.task_type_id && form.assignee_id
 

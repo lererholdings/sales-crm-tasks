@@ -121,4 +121,41 @@ describe('TaskSidePanel', () => {
 
     await waitFor(() => expect(screen.getByText('New note')).toBeTruthy())
   })
+
+  it('saves a status/priority change through the same Save flow as other fields', async () => {
+    const onUpdated = vi.fn()
+    mockFetchByUrl({
+      '/api/tasks/t1?notes_limit': TASK_DETAIL,
+      '/api/users?me=true': CURRENT_USER,
+      '/api/tasks/t1': (_url, opts) => {
+        if (opts?.method === 'PATCH') {
+          const body = JSON.parse(opts.body)
+          return { ...TASK_DETAIL, ...body }
+        }
+        return TASK_DETAIL
+      },
+    })
+
+    render(<TaskSidePanel taskId="t1" onClose={vi.fn()} onUpdated={onUpdated} />)
+    await waitFor(() => expect(screen.getByText('First note')).toBeTruthy())
+
+    // Status select shows the task's current value ("In progress"), open it
+    // and pick "Done" instead.
+    fireEvent.click(screen.getByText('In progress', { selector: 'button span' }))
+    fireEvent.click(screen.getByText('Done'))
+
+    fireEvent.click(screen.getByText('Save'))
+
+    await waitFor(() => {
+      const patchCall = global.fetch.mock.calls.find(
+        ([url, opts]) => url === '/api/tasks/t1' && opts?.method === 'PATCH',
+      )
+      expect(patchCall).toBeDefined()
+      const body = JSON.parse(patchCall[1].body)
+      expect(body.status).toBe('done')
+      expect(body.priority).toBe('high') // unchanged, but still sent
+    })
+
+    expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ status: 'done' }))
+  })
 })
