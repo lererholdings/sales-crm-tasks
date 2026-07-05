@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react'
+import { useCurrentUser } from '../../hooks/useCurrentUser.js'
 import { useApiClient } from '../../lib/apiClient.js'
+import ConfirmDialog from '../ui/ConfirmDialog.jsx'
 import SidePanel from '../ui/SidePanel.jsx'
 
 export default function AccountSidePanel({ accountId, onClose, onUpdated }) {
   const apiClient = useApiClient()
+  const { user: currentUser } = useCurrentUser()
   const [account, setAccount] = useState(null)
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
+  const [archiving, setArchiving] = useState(false)
+  const [archiveError, setArchiveError] = useState(null)
 
   useEffect(() => {
     if (!accountId) return undefined
@@ -57,10 +63,28 @@ export default function AccountSidePanel({ accountId, onClose, onUpdated }) {
     }
   }
 
+  const handleArchive = async () => {
+    setArchiving(true)
+    setArchiveError(null)
+    try {
+      const updated = await apiClient.delete(`/accounts/${accountId}`)
+      setAccount(updated)
+      onUpdated?.(updated)
+      setShowArchiveConfirm(false)
+    } catch (err) {
+      setArchiveError(err.message)
+    } finally {
+      setArchiving(false)
+    }
+  }
+
   return (
     <SidePanel open={Boolean(accountId)} onClose={onClose}>
       <div className="flex items-center justify-between border-b border-border p-4">
-        <h2 className="text-[15px] font-medium text-text-primary">{account?.name ?? 'Account'}</h2>
+        <h2 className="text-[15px] font-medium text-text-primary">
+          {account?.name ?? 'Account'}
+          {account?.deleted_at && <span className="ml-1.5 text-[12px] font-normal text-text-muted">(archived)</span>}
+        </h2>
         <button type="button" onClick={onClose} className="text-text-secondary hover:text-text-primary">
           <i className="ti ti-x" />
         </button>
@@ -117,7 +141,20 @@ export default function AccountSidePanel({ accountId, onClose, onUpdated }) {
 
           {error && <p className="text-[12px] text-urgent">{error}</p>}
 
-          <div className="mt-2 flex justify-end gap-2">
+          {archiveError && <p className="text-[12px] text-urgent">{archiveError}</p>}
+
+          <div className="mt-2 flex items-center justify-between gap-2">
+            {currentUser?.role === 'admin' && !account?.deleted_at ? (
+              <button
+                type="button"
+                onClick={() => setShowArchiveConfirm(true)}
+                className="rounded-lg px-3 py-1.5 text-[13px] text-urgent hover:bg-bg-raised"
+              >
+                Archive
+              </button>
+            ) : (
+              <span />
+            )}
             <button
               type="button"
               onClick={handleSave}
@@ -136,6 +173,15 @@ export default function AccountSidePanel({ accountId, onClose, onUpdated }) {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={showArchiveConfirm}
+        title="Archive this account?"
+        message="It will stay visible everywhere (greyed out), but can no longer be used for new work unless restored. Only possible when it has no active tasks."
+        confirmLabel={archiving ? 'Archiving…' : 'Archive'}
+        onConfirm={handleArchive}
+        onCancel={() => setShowArchiveConfirm(false)}
+      />
     </SidePanel>
   )
 }

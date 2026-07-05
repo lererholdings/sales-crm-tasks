@@ -112,6 +112,25 @@
   --color-group-bg: var(--group-bg);
   --color-group-border: var(--group-border);
   --color-group-text: var(--group-text);
+  --color-group-count-bg: var(--group-count-bg);
+  --color-group-tag-bg: var(--group-tag-bg);
+  --color-group-tag-text: var(--group-tag-text);
+
+  --color-badge-crit-bg: var(--badge-crit-bg);
+  --color-badge-crit-text: var(--badge-crit-text);
+  --color-badge-high-bg: var(--badge-high-bg);
+  --color-badge-high-text: var(--badge-high-text);
+  --color-badge-med-bg: var(--badge-med-bg);
+  --color-badge-med-text: var(--badge-med-text);
+
+  --color-status-ip-bg: var(--status-ip-bg);
+  --color-status-ip-text: var(--status-ip-text);
+  --color-status-wait-bg: var(--status-wait-bg);
+  --color-status-wait-text: var(--status-wait-text);
+  --color-status-done-bg: var(--status-done-bg);
+  --color-status-done-text: var(--status-done-text);
+
+  --color-note-border: var(--note-border);
 
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);

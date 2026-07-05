@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { query } from '../../lib/db.js'
 import listCreateHandler from './index.js'
 import singleHandler from './[id].js'
@@ -120,5 +120,118 @@ describe.skipIf(!hasEnv)('accounts API integration (real dev DB)', () => {
     )
     expect(rows).toHaveLength(1)
     expect(rows[0].changed_fields).toEqual({ acv: { from: 10000, to: 99000 } })
+  })
+})
+
+describe.skipIf(!hasEnv)('account archive integration (real dev DB)', () => {
+  const memberClerkId = `test_ci_${runId}_archive_member`
+  const adminClerkId = `test_ci_${runId}_archive_admin`
+  let activeTaskTypeId = null
+  const createdArchiveTaskIds = []
+  const createdArchiveAccountIds = []
+
+  function bypassReqAs(clerkId, overrides = {}) {
+    return {
+      headers: {
+        'x-test-bypass-secret': bypassSecret,
+        'x-test-clerk-user-id': clerkId,
+        'x-test-email': `${clerkId}@test.invalid`,
+      },
+      query: {},
+      ...overrides,
+    }
+  }
+
+  async function createTestAccount(name) {
+    const createRes = mockRes()
+    await listCreateHandler(
+      bypassReqAs(adminClerkId, { method: 'POST', body: { name, country: 'Australia' } }),
+      createRes,
+    )
+    createdArchiveAccountIds.push(createRes.body.id)
+    return createRes.body.id
+  }
+
+  async function insertTask(accountId, status) {
+    const { rows: adminUserRows } = await query('SELECT id FROM users WHERE clerk_user_id = $1', [adminClerkId])
+    const assigneeId = adminUserRows[0].id
+    const { rows } = await query(
+      `INSERT INTO tasks (task_name, account_id, task_type_id, assignee_id, status, last_updated_by)
+       VALUES ($1, $2, $3, $4, $5, $4) RETURNING id`,
+      [`Test CI Archive Task ${runId}`, accountId, activeTaskTypeId, assigneeId, status],
+    )
+    createdArchiveTaskIds.push(rows[0].id)
+  }
+
+  beforeAll(async () => {
+    const { rows } = await query('SELECT id FROM task_types WHERE active = true LIMIT 1')
+    activeTaskTypeId = rows[0]?.id
+    if (!activeTaskTypeId) throw new Error('No active task_types row found in dev DB — cannot run this suite')
+
+    await listCreateHandler(bypassReqAs(adminClerkId, { method: 'GET' }), mockRes())
+    await query('UPDATE users SET role = $1 WHERE clerk_user_id = $2', ['admin', adminClerkId])
+    await listCreateHandler(bypassReqAs(memberClerkId, { method: 'GET' }), mockRes())
+  })
+
+  afterAll(async () => {
+    if (createdArchiveTaskIds.length > 0) await query('DELETE FROM tasks WHERE id = ANY($1)', [createdArchiveTaskIds])
+    if (createdArchiveAccountIds.length > 0) {
+      await query('DELETE FROM audit_log WHERE entity_id = ANY($1)', [createdArchiveAccountIds])
+      await query('DELETE FROM accounts WHERE id = ANY($1)', [createdArchiveAccountIds])
+    }
+    await query('DELETE FROM users WHERE clerk_user_id = ANY($1)', [[memberClerkId, adminClerkId]])
+  })
+
+  it('403s a non-admin trying to archive', async () => {
+    const accountId = await createTestAccount(`Test CI Archive Member ${runId}`)
+
+    const res = mockRes()
+    await singleHandler(bypassReqAs(memberClerkId, { method: 'DELETE', query: { id: accountId } }), res)
+
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('409s when the account has an active (non-done) task', async () => {
+    const accountId = await createTestAccount(`Test CI Archive Active ${runId}`)
+    await insertTask(accountId, 'in_progress')
+
+    const res = mockRes()
+    await singleHandler(bypassReqAs(adminClerkId, { method: 'DELETE', query: { id: accountId } }), res)
+
+    expect(res.statusCode).toBe(409)
+  })
+
+  it('archives when all tasks are done, writes an audit_log "deleted" entry, and still appears in the list', async () => {
+    const accountId = await createTestAccount(`Test CI Archive Done ${runId}`)
+    await insertTask(accountId, 'done')
+
+    const res = mockRes()
+    await singleHandler(bypassReqAs(adminClerkId, { method: 'DELETE', query: { id: accountId } }), res)
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body.deleted_at).not.toBeNull()
+
+    const { rows: auditRows } = await query(
+      "SELECT changed_fields FROM audit_log WHERE entity_type = 'account' AND entity_id = $1 AND action = 'deleted'",
+      [accountId],
+    )
+    expect(auditRows).toHaveLength(1)
+
+    const listRes = mockRes()
+    await listCreateHandler(bypassReqAs(adminClerkId, { method: 'GET' }), listRes)
+    const listed = listRes.body.find((a) => a.id === accountId)
+    expect(listed).toBeDefined()
+    expect(listed.deleted_at).not.toBeNull()
+  })
+
+  it('400s when archiving an already-archived account', async () => {
+    const accountId = await createTestAccount(`Test CI Archive Twice ${runId}`)
+
+    await singleHandler(bypassReqAs(adminClerkId, { method: 'DELETE', query: { id: accountId } }), mockRes())
+
+    const res = mockRes()
+    await singleHandler(bypassReqAs(adminClerkId, { method: 'DELETE', query: { id: accountId } }), res)
+
+    expect(res.statusCode).toBe(400)
   })
 })
