@@ -83,6 +83,29 @@ describe('TasksPage', () => {
     })
   })
 
+  it('refreshes the task list when the side panel closes (notes/edits show without a full reload)', async () => {
+    mockFetchByUrl({
+      '/api/tasks/t1?notes_limit': { ...TASK, notes: [], notes_total: 0 },
+      '/api/tasks': [TASK],
+      '/api/users?me=true': { id: 'u1', display_name: 'Sara', email: 's@x.com', role: 'member' },
+    })
+
+    render(<TasksPage />)
+    await waitFor(() => expect(screen.getByText('RFP response')).toBeTruthy())
+
+    const initialTasksCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/tasks').length
+
+    fireEvent.click(screen.getByText('RFP response'))
+    await waitFor(() => expect(screen.getByLabelText('Close task panel')).toBeTruthy())
+
+    fireEvent.click(screen.getByLabelText('Close task panel'))
+
+    await waitFor(() => {
+      const afterCloseCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/tasks').length
+      expect(afterCloseCalls).toBeGreaterThan(initialTasksCalls)
+    })
+  })
+
   it('cancelling the delete confirmation leaves the task in place', async () => {
     mockFetchByUrl({ '/api/tasks': [TASK] })
 

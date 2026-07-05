@@ -66,7 +66,7 @@ export default function TaskSidePanel({ taskId, onClose, onUpdated }) {
       <div className="border-b border-border p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-[15px] font-medium text-text-primary">{task?.task_name ?? 'Task'}</h2>
-          <button type="button" onClick={onClose} className="text-text-secondary hover:text-text-primary">
+          <button type="button" onClick={onClose} aria-label="Close task panel" className="text-text-secondary hover:text-text-primary">
             <i className="ti ti-x" />
           </button>
         </div>

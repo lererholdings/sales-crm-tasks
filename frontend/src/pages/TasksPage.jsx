@@ -72,7 +72,17 @@ export default function TasksPage() {
         <NewTaskModal tasks={tasks} onClose={() => setShowNewModal(false)} onCreate={handleCreate} />
       )}
 
-      <TaskSidePanel taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} onUpdated={refresh} />
+      <TaskSidePanel
+        taskId={selectedTaskId}
+        onClose={() => {
+          setSelectedTaskId(null)
+          // Notes added/edited in the panel only update its own local
+          // state (hooks/useTask.js) — refresh the list on close so the
+          // table's NotesPreview reflects them without a full page reload.
+          refresh()
+        }}
+        onUpdated={refresh}
+      />
 
       <ConfirmDialog
         open={Boolean(taskPendingDelete)}
