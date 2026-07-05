@@ -48,4 +48,13 @@ describe('AccountTable', () => {
 
     expect(onSelectAccount).toHaveBeenCalledWith(ACCOUNTS[0])
   })
+
+  it('shows an "(archived)" caption and greys out an archived account row', () => {
+    const archived = [...ACCOUNTS, { ...ACCOUNTS[1], id: 'a3', name: 'Archived Co', deleted_at: '2026-07-01T00:00:00Z' }]
+    render(<AccountTable accounts={archived} onSelectAccount={vi.fn()} />)
+
+    expect(screen.getByText('(archived)')).toBeTruthy()
+    const row = screen.getByText('Archived Co').closest('tr')
+    expect(row.className).toContain('opacity-60')
+  })
 })

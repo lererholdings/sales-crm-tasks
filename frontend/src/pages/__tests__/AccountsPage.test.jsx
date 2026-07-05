@@ -12,16 +12,31 @@ function jsonResponse(body) {
   return { ok: true, json: async () => body }
 }
 
+// AccountSidePanel is always mounted (even closed) and pulls in the current
+// user (for the admin-only Archive button), so the mock has to route by URL
+// rather than assume accounts is the only endpoint ever called.
+function mockFetchByUrl(routes) {
+  global.fetch = vi.fn((url) => {
+    for (const [pattern, body] of Object.entries(routes)) {
+      if (url.startsWith(pattern)) return Promise.resolve(jsonResponse(body))
+    }
+    return Promise.resolve(jsonResponse([]))
+  })
+}
+
+function accountsCallCount() {
+  return global.fetch.mock.calls.filter(([url]) => url.startsWith('/api/accounts') && !url.includes('search=')).length
+}
+
 describe('AccountsPage', () => {
   beforeEach(() => {
     getTokenMock.mockReset()
     getTokenMock.mockResolvedValue('token')
-    global.fetch = vi.fn()
   })
 
   it('loads and displays accounts from the API', async () => {
-    global.fetch.mockResolvedValueOnce(
-      jsonResponse([
+    mockFetchByUrl({
+      '/api/accounts': [
         {
           id: 'a1',
           name: 'Acme Corp',
@@ -29,9 +44,10 @@ describe('AccountsPage', () => {
           sfdc_account_url: null,
           last_updated_by: null,
           updated_at: '2026-06-15T10:00:00Z',
+          deleted_at: null,
         },
-      ]),
-    )
+      ],
+    })
 
     render(<AccountsPage />)
 
@@ -40,24 +56,24 @@ describe('AccountsPage', () => {
   })
 
   it('re-fetches with a search query param when the search input changes', async () => {
-    global.fetch.mockResolvedValue(jsonResponse([]))
+    mockFetchByUrl({ '/api/accounts': [] })
 
     render(<AccountsPage />)
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(accountsCallCount()).toBeGreaterThan(0))
 
     fireEvent.change(screen.getByPlaceholderText('Search accounts…'), { target: { value: 'Acme' } })
 
     await waitFor(() => {
-      const lastCall = global.fetch.mock.calls.at(-1)
-      expect(lastCall[0]).toBe('/api/accounts?search=Acme')
+      const searchCall = global.fetch.mock.calls.find(([url]) => url === '/api/accounts?search=Acme')
+      expect(searchCall).toBeDefined()
     })
   })
 
   it('opens the new account modal', async () => {
-    global.fetch.mockResolvedValue(jsonResponse([]))
+    mockFetchByUrl({ '/api/accounts': [] })
 
     render(<AccountsPage />)
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(accountsCallCount()).toBeGreaterThan(0))
 
     fireEvent.click(screen.getByText('New account'))
 

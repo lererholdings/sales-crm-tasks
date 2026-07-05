@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const queryMock = vi.fn()
-vi.mock('../../lib/db.js', () => ({ query: (...args) => queryMock(...args) }))
+vi.mock('../../../lib/db.js', () => ({ query: (...args) => queryMock(...args) }))
 
 const verifyTokenMock = vi.fn()
 vi.mock('@clerk/backend', () => ({
@@ -9,7 +9,7 @@ vi.mock('@clerk/backend', () => ({
   createClerkClient: () => ({ users: { getUser: vi.fn() } }),
 }))
 
-const handler = (await import('./[id].js')).default
+const handler = (await import('./index.js')).default
 
 const CALLER_ROW = { id: 'caller-id', role: 'member', display_name: 'Caller', email: 'c@x.com' }
 

@@ -139,3 +139,77 @@ describe('PATCH /api/accounts/:id', () => {
     expect(queryMock).toHaveBeenCalledTimes(3)
   })
 })
+
+describe('DELETE /api/accounts/:id (archive)', () => {
+  beforeEach(() => {
+    queryMock.mockReset()
+    verifyTokenMock.mockResolvedValue({ sub: 'clerk_caller' })
+  })
+
+  it('403s for a non-admin', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'DELETE' }), res)
+
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('404s when the account does not exist', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ ...CALLER_ROW, role: 'admin' }] })
+      .mockResolvedValueOnce({ rows: [] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'DELETE' }), res)
+
+    expect(res.statusCode).toBe(404)
+  })
+
+  it('400s when the account is already archived', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ ...CALLER_ROW, role: 'admin' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'a1', deleted_at: 'already' }] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'DELETE' }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('409s when the account has an active (non-done, non-deleted) task', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ ...CALLER_ROW, role: 'admin' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'a1', deleted_at: null }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'active-task' }] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'DELETE' }), res)
+
+    expect(res.statusCode).toBe(409)
+  })
+
+  it('archives the account and logs a "deleted" audit entry when there are no active tasks', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ ...CALLER_ROW, role: 'admin' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'a1', deleted_at: null }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          { id: 'a1', name: 'Acme', country: 'AU', sfdc_account_url: null, acv: '50000.00', updated_at: 't', deleted_at: 'now' },
+        ],
+      })
+      .mockResolvedValueOnce({})
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'DELETE' }), res)
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body.deleted_at).toBe('now')
+
+    const auditCall = queryMock.mock.calls[4]
+    expect(auditCall[0]).toContain('INSERT INTO audit_log')
+    expect(auditCall[1][3]).toBe('deleted')
+    expect(JSON.parse(auditCall[1][4])).toEqual({ deleted_at: { from: null, to: 'now' } })
+  })
+})

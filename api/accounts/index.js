@@ -12,6 +12,7 @@ function toAccount(row, { includeAcv }) {
       ? { id: row.updated_by_id, display_name: row.updated_by_name }
       : null,
     updated_at: row.updated_at,
+    deleted_at: row.deleted_at ?? null,
   }
   if (includeAcv) {
     account.acv = row.acv === null ? null : Number(row.acv)
@@ -24,13 +25,16 @@ export default withAuth(async (req, res, user) => {
     const search = typeof req.query.search === 'string' ? req.query.search : null
     const includeAcv = req.query.include === 'acv'
 
+    // Archived accounts are intentionally NOT filtered out here — issue #5:
+    // they still show up (sorted last), the frontend just greys them out
+    // with an "archived" label, unlike tasks' hide-by-default soft delete.
     const { rows } = await query(
-      `SELECT a.id, a.name, a.country, a.sfdc_account_url, a.acv, a.updated_at,
+      `SELECT a.id, a.name, a.country, a.sfdc_account_url, a.acv, a.updated_at, a.deleted_at,
               u.id AS updated_by_id, u.display_name AS updated_by_name
        FROM accounts a
        LEFT JOIN users u ON u.id = a.last_updated_by
        WHERE ($1::text IS NULL OR a.name ILIKE '%' || $1 || '%')
-       ORDER BY a.name`,
+       ORDER BY (a.deleted_at IS NOT NULL), a.name`,
       [search],
     )
     return res.status(200).json(rows.map((row) => toAccount(row, { includeAcv })))

@@ -1,7 +1,7 @@
-import { withAuth } from '../../lib/auth.js'
-import { withAudit, logFieldChanges } from '../../lib/audit.js'
-import { query } from '../../lib/db.js'
-import { TASK_AUDIT_FIELDS, TASK_BASE_SELECT, toTask } from '../../lib/tasks.js'
+import { withAuth } from '../../../lib/auth.js'
+import { withAudit, logFieldChanges } from '../../../lib/audit.js'
+import { query } from '../../../lib/db.js'
+import { TASK_AUDIT_FIELDS, TASK_BASE_SELECT, toTask } from '../../../lib/tasks.js'
 
 async function fetchPaginatedNotes(taskId, limit, offset) {
   const { rows } = await query(
