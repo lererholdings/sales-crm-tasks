@@ -12,8 +12,12 @@ import { createPortal } from 'react-dom'
 // contributes to its scrollable ancestor's scrollHeight — inside a modal
 // with overflow-y-auto (like NewTaskModal), that made the last field's
 // dropdown silently grow the modal and force a scroll instead of floating
-// on top of it. Closes on scroll of anything (rather than repositioning)
-// since these are short-lived popovers, not persistent overlays.
+// on top of it. Closes on scroll that would invalidate its position
+// (the page itself, or a scrollable ancestor of the trigger) rather than
+// repositioning, since these are short-lived popovers — but NOT on scroll
+// of unrelated containers elsewhere on the page (e.g. a long notes list),
+// which used to close the dropdown just because something else scrolled.
+//
 // Rough height of the dropdown (filter input + up to max-h-48 option list +
 // borders) — used to decide whether there's enough room below the trigger
 // before opening downward. We can't measure the real height ahead of the
@@ -49,8 +53,14 @@ export default function SearchableSelect({ options, value, onChange, placeholder
       if (buttonRef.current?.contains(e.target) || dropdownRef.current?.contains(e.target)) return
       setOpen(false)
     }
-    function handleScroll() {
-      setOpen(false)
+    function handleScroll(e) {
+      const scrolledEl = e.target
+      // Scrolling the dropdown's own option list is normal interaction, not
+      // something that should close it.
+      if (dropdownRef.current?.contains(scrolledEl)) return
+      const isPageScroll = scrolledEl === document || scrolledEl === window
+      const scrollsTrigger = typeof scrolledEl.contains === 'function' && scrolledEl.contains(buttonRef.current)
+      if (isPageScroll || scrollsTrigger) setOpen(false)
     }
     document.addEventListener('click', handleClick)
     window.addEventListener('scroll', handleScroll, true)

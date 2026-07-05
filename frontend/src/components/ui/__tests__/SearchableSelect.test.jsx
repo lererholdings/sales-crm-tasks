@@ -102,6 +102,61 @@ describe('SearchableSelect', () => {
     })
   })
 
+  describe('scroll behavior', () => {
+    // Regression test: scrolling ANY container on the page used to close
+    // every open dropdown, including a long unrelated list elsewhere on
+    // the same page (e.g. TaskSidePanel's notes list) that had nothing to
+    // do with this select's position.
+    it('does not close when an unrelated container scrolls', () => {
+      render(
+        <div>
+          <SearchableSelect options={OPTIONS} value="" onChange={vi.fn()} />
+          <div data-testid="unrelated-scrollable">unrelated</div>
+        </div>,
+      )
+
+      fireEvent.click(screen.getByRole('button'))
+      expect(screen.getByPlaceholderText('Type to filter…')).toBeTruthy()
+
+      fireEvent.scroll(screen.getByTestId('unrelated-scrollable'))
+
+      expect(screen.getByPlaceholderText('Type to filter…')).toBeTruthy()
+    })
+
+    it('does not close when scrolling its own option list', () => {
+      render(<SearchableSelect options={OPTIONS} value="" onChange={vi.fn()} />)
+
+      fireEvent.click(screen.getByRole('button'))
+      const optionList = screen.getByText('Acme Corp').parentElement
+
+      fireEvent.scroll(optionList)
+
+      expect(screen.getByPlaceholderText('Type to filter…')).toBeTruthy()
+    })
+
+    it('closes when the page itself scrolls', () => {
+      render(<SearchableSelect options={OPTIONS} value="" onChange={vi.fn()} />)
+
+      fireEvent.click(screen.getByRole('button'))
+      fireEvent.scroll(document)
+
+      expect(screen.queryByPlaceholderText('Type to filter…')).toBeFalsy()
+    })
+
+    it('closes when a scrollable ancestor of the trigger scrolls', () => {
+      const { container } = render(
+        <div data-testid="ancestor-scrollable">
+          <SearchableSelect options={OPTIONS} value="" onChange={vi.fn()} />
+        </div>,
+      )
+
+      fireEvent.click(screen.getByRole('button'))
+      fireEvent.scroll(container.querySelector('[data-testid="ancestor-scrollable"]'))
+
+      expect(screen.queryByPlaceholderText('Type to filter…')).toBeFalsy()
+    })
+  })
+
   it('closes the dropdown when clicking outside', () => {
     render(
       <div>
