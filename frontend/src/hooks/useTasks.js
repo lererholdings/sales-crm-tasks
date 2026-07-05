@@ -24,5 +24,13 @@ export function useTasks() {
     refresh()
   }, [refresh])
 
-  return { tasks, loading, error, refresh }
+  // Merges a patch into one task by id, without refetching the whole list —
+  // used after edits made in TaskSidePanel so only that row's object
+  // reference changes (see TaskRow's React.memo, which relies on this to
+  // skip re-rendering every other row).
+  const updateTaskInPlace = useCallback((taskId, patch) => {
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, ...patch } : t)))
+  }, [])
+
+  return { tasks, loading, error, refresh, updateTaskInPlace }
 }

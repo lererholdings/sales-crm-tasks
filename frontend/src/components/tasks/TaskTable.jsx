@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useCallback, useState } from 'react'
 import { groupTasks } from '../../lib/groupTasks.js'
 import TaskGroupHeader from './TaskGroupHeader.jsx'
 import TaskRow from './TaskRow.jsx'
@@ -6,20 +6,24 @@ import TaskRow from './TaskRow.jsx'
 export default function TaskTable({ tasks, onOpen, onDuplicate, onDeleteRequest }) {
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set())
 
-  if (tasks.length === 0) {
-    return <p className="p-6 text-sm text-text-secondary">No tasks yet.</p>
-  }
-
-  const groups = groupTasks(tasks)
-
-  function toggleGroup(key) {
+  // Stable across renders (unlike an inline `() => toggleGroup(group.key)`
+  // per group) so TaskGroupHeader's React.memo can actually take effect —
+  // it calls onToggle(groupKey) itself instead of receiving a pre-bound
+  // closure that would be a new function reference every render.
+  const toggleGroup = useCallback((key) => {
     setCollapsedGroups((prev) => {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key)
       else next.add(key)
       return next
     })
+  }, [])
+
+  if (tasks.length === 0) {
+    return <p className="p-6 text-sm text-text-secondary">No tasks yet.</p>
   }
+
+  const groups = groupTasks(tasks)
 
   return (
     <table className="w-full border-collapse text-[13px]">
@@ -41,11 +45,12 @@ export default function TaskTable({ tasks, onOpen, onDuplicate, onDeleteRequest 
           return (
             <Fragment key={group.key}>
               <TaskGroupHeader
+                groupKey={group.key}
                 label={group.label}
                 isPartnerOnly={group.isPartnerOnly}
                 count={group.tasks.length}
                 collapsed={collapsed}
-                onToggle={() => toggleGroup(group.key)}
+                onToggle={toggleGroup}
               />
               {!collapsed &&
                 group.tasks.map((task) => (

@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import TaskTable from '../TaskTable.jsx'
+import TaskRow from '../TaskRow.jsx'
+import TaskGroupHeader from '../TaskGroupHeader.jsx'
 
 function task(overrides = {}) {
   return {
@@ -63,5 +65,16 @@ describe('TaskTable', () => {
 
     fireEvent.click(screen.getByText('RFP response'))
     expect(onOpen).toHaveBeenCalledWith(tasks[0])
+  })
+
+  // Regression guard: TaskRow/TaskGroupHeader are wrapped in React.memo so
+  // updating one task in place (hooks/useTasks.js's updateTaskInPlace)
+  // only re-renders that row, not the whole table. This only works because
+  // both are memoized AND their callback props are stable references
+  // (useCallback in TasksPage.jsx / TaskTable.jsx) — losing either wrapper
+  // silently defeats the optimization without any other test catching it.
+  it('memoizes TaskRow and TaskGroupHeader', () => {
+    expect(TaskRow.$$typeof).toBe(Symbol.for('react.memo'))
+    expect(TaskGroupHeader.$$typeof).toBe(Symbol.for('react.memo'))
   })
 })

@@ -10,7 +10,7 @@ import SidePanel from '../ui/SidePanel.jsx'
 import StatusPill from '../ui/StatusPill.jsx'
 import NotesTimeline from './NotesTimeline.jsx'
 
-export default function TaskSidePanel({ taskId, onClose, onUpdated }) {
+export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, onUpdated, onNotesChanged }) {
   const { task, notes, notesTotal, loading, updateTask, loadMoreNotes, addNote, editNote } = useTask(taskId)
   const { accounts } = useAccounts()
   const { taskTypes } = useTaskTypes()
@@ -55,6 +55,24 @@ export default function TaskSidePanel({ taskId, onClose, onUpdated }) {
     } finally {
       setSaving(false)
     }
+  }
+
+  // Notes changes don't refetch the task list — they patch just this row's
+  // preview slice in place (see hooks/useTasks.js's updateTaskInPlace), so
+  // TaskRow's React.memo can skip re-rendering every other row.
+  const handleAddNote = async (content) => {
+    const note = await addNote(content)
+    onNotesChanged?.(taskId, [note, ...notes].slice(0, notesPreviewCount))
+    return note
+  }
+
+  const handleEditNote = async (noteId, content) => {
+    const updated = await editNote(noteId, content)
+    onNotesChanged?.(
+      taskId,
+      notes.map((n) => (n.id === noteId ? updated : n)).slice(0, notesPreviewCount),
+    )
+    return updated
   }
 
   const accountOptions = accounts.map((a) => ({ value: a.id, label: a.name, archived: Boolean(a.deleted_at) }))
@@ -206,8 +224,8 @@ export default function TaskSidePanel({ taskId, onClose, onUpdated }) {
             notesTotal={notesTotal}
             currentUserId={currentUser?.id}
             onLoadMore={loadMoreNotes}
-            onAddNote={addNote}
-            onEditNote={editNote}
+            onAddNote={handleAddNote}
+            onEditNote={handleEditNote}
           />
         </>
       )}

@@ -28,11 +28,15 @@ function jsonResponse(body) {
 
 // TasksPage's children (NewTaskModal, TaskSidePanel) each pull in their own
 // accounts/task-types/users/current-user data, so the mock has to route by
-// URL rather than a fixed call sequence.
+// URL rather than a fixed call sequence. A route value can be a function
+// (url, opts) => body to distinguish GET vs POST/PATCH on the same path.
 function mockFetchByUrl(routes) {
-  global.fetch = vi.fn((url) => {
-    for (const [pattern, body] of Object.entries(routes)) {
-      if (url.startsWith(pattern)) return Promise.resolve(jsonResponse(body))
+  global.fetch = vi.fn((url, opts) => {
+    for (const [pattern, handler] of Object.entries(routes)) {
+      if (url.startsWith(pattern)) {
+        const body = typeof handler === 'function' ? handler(url, opts) : handler
+        return Promise.resolve(jsonResponse(body))
+      }
     }
     return Promise.resolve(jsonResponse([]))
   })
@@ -83,7 +87,7 @@ describe('TasksPage', () => {
     })
   })
 
-  it('refreshes the task list when the side panel closes (notes/edits show without a full reload)', async () => {
+  it('does not refetch the task list when the side panel closes without any change', async () => {
     mockFetchByUrl({
       '/api/tasks/t1?notes_limit': { ...TASK, notes: [], notes_total: 0 },
       '/api/tasks': [TASK],
@@ -92,18 +96,55 @@ describe('TasksPage', () => {
 
     render(<TasksPage />)
     await waitFor(() => expect(screen.getByText('RFP response')).toBeTruthy())
-
     const initialTasksCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/tasks').length
 
     fireEvent.click(screen.getByText('RFP response'))
     await waitFor(() => expect(screen.getByLabelText('Close task panel')).toBeTruthy())
+    fireEvent.click(screen.getByLabelText('Close task panel'))
+    await waitFor(() => expect(screen.queryByLabelText('Close task panel')).toBeFalsy())
+
+    const afterCloseCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/tasks').length
+    expect(afterCloseCalls).toBe(initialTasksCalls)
+  })
+
+  it('updates the row\'s NotesPreview after posting a note, without refetching the list', async () => {
+    mockFetchByUrl({
+      '/api/tasks/t1?notes_limit': { ...TASK, notes: [], notes_total: 0 },
+      '/api/tasks/t1/notes': (_url, opts) =>
+        opts?.method === 'POST'
+          ? {
+              id: 'n1',
+              content: 'New note',
+              user: { id: 'u1', display_name: 'Sara' },
+              created_at: '2026-07-05T00:00:00Z',
+              edited_at: null,
+            }
+          : { notes: [], total: 0, limit: 25, offset: 0 },
+      '/api/tasks': [TASK],
+      '/api/users?me=true': { id: 'u1', display_name: 'Sara', email: 's@x.com', role: 'member' },
+    })
+
+    render(<TasksPage />)
+    await waitFor(() => expect(screen.getByText('RFP response')).toBeTruthy())
+    const initialTasksCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/tasks').length
+
+    fireEvent.click(screen.getByText('RFP response'))
+    await waitFor(() => expect(screen.getByPlaceholderText('Add a note… (markdown supported)')).toBeTruthy())
+
+    fireEvent.change(screen.getByPlaceholderText('Add a note… (markdown supported)'), {
+      target: { value: 'New note' },
+    })
+    fireEvent.click(screen.getByText('Post note'))
+
+    await waitFor(() => expect(screen.getAllByText(/New note/).length).toBeGreaterThan(0))
+
+    const afterAddCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/tasks').length
+    expect(afterAddCalls).toBe(initialTasksCalls)
 
     fireEvent.click(screen.getByLabelText('Close task panel'))
 
-    await waitFor(() => {
-      const afterCloseCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/tasks').length
-      expect(afterCloseCalls).toBeGreaterThan(initialTasksCalls)
-    })
+    await waitFor(() => expect(screen.queryByLabelText('Close task panel')).toBeFalsy())
+    expect(screen.getByText(/New note/)).toBeTruthy()
   })
 
   it('cancelling the delete confirmation leaves the task in place', async () => {

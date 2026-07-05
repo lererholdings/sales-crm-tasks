@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useTasks } from '../hooks/useTasks.js'
 import { useApiClient } from '../lib/apiClient.js'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
@@ -7,7 +7,7 @@ import TaskSidePanel from '../components/tasks/TaskSidePanel.jsx'
 import TaskTable from '../components/tasks/TaskTable.jsx'
 
 export default function TasksPage() {
-  const { tasks, loading, error, refresh } = useTasks()
+  const { tasks, loading, error, refresh, updateTaskInPlace } = useTasks()
   const apiClient = useApiClient()
   const [showNewModal, setShowNewModal] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState(null)
@@ -18,22 +18,25 @@ export default function TasksPage() {
     await refresh()
   }
 
-  const handleDuplicate = async (task) => {
-    await apiClient.post('/tasks', {
-      task_name: `${task.task_name} (copy)`,
-      account_id: task.account?.id ?? undefined,
-      partner_name: task.partner_name ?? undefined,
-      distributor_name: task.distributor_name ?? undefined,
-      task_type_id: task.task_type?.id,
-      assignee_id: task.assignee?.id,
-      next_action: task.next_action ?? undefined,
-      eta: task.eta ?? undefined,
-      priority: task.priority,
-      status: task.status,
-      sfdc_task_url: task.sfdc_task_url ?? undefined,
-    })
-    await refresh()
-  }
+  const handleDuplicate = useCallback(
+    async (task) => {
+      await apiClient.post('/tasks', {
+        task_name: `${task.task_name} (copy)`,
+        account_id: task.account?.id ?? undefined,
+        partner_name: task.partner_name ?? undefined,
+        distributor_name: task.distributor_name ?? undefined,
+        task_type_id: task.task_type?.id,
+        assignee_id: task.assignee?.id,
+        next_action: task.next_action ?? undefined,
+        eta: task.eta ?? undefined,
+        priority: task.priority,
+        status: task.status,
+        sfdc_task_url: task.sfdc_task_url ?? undefined,
+      })
+      await refresh()
+    },
+    [apiClient, refresh],
+  )
 
   const handleDeleteConfirmed = async () => {
     await apiClient.delete(`/tasks/${taskPendingDelete.id}`)
@@ -41,6 +44,14 @@ export default function TasksPage() {
     setTaskPendingDelete(null)
     await refresh()
   }
+
+  // Stable references so TaskRow's React.memo can actually skip re-rendering
+  // rows whose own task object didn't change (see hooks/useTasks.js).
+  const handleOpen = useCallback((task) => setSelectedTaskId(task.id), [])
+  const handleDeleteRequest = useCallback((task) => setTaskPendingDelete(task), [])
+  const handleClosePanel = useCallback(() => setSelectedTaskId(null), [])
+
+  const selectedTask = tasks.find((t) => t.id === selectedTaskId)
 
   return (
     <div className="flex h-full flex-col">
@@ -61,9 +72,9 @@ export default function TasksPage() {
         {!loading && !error && (
           <TaskTable
             tasks={tasks}
-            onOpen={(task) => setSelectedTaskId(task.id)}
+            onOpen={handleOpen}
             onDuplicate={handleDuplicate}
-            onDeleteRequest={(task) => setTaskPendingDelete(task)}
+            onDeleteRequest={handleDeleteRequest}
           />
         )}
       </div>
@@ -74,14 +85,10 @@ export default function TasksPage() {
 
       <TaskSidePanel
         taskId={selectedTaskId}
-        onClose={() => {
-          setSelectedTaskId(null)
-          // Notes added/edited in the panel only update its own local
-          // state (hooks/useTask.js) — refresh the list on close so the
-          // table's NotesPreview reflects them without a full page reload.
-          refresh()
-        }}
-        onUpdated={refresh}
+        notesPreviewCount={selectedTask?.notes?.length || 2}
+        onClose={handleClosePanel}
+        onUpdated={(updated) => updateTaskInPlace(updated.id, updated)}
+        onNotesChanged={(taskId, notesPreview) => updateTaskInPlace(taskId, { notes: notesPreview })}
       />
 
       <ConfirmDialog
