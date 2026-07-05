@@ -152,10 +152,43 @@ describe('GET /api/tasks', () => {
     expect(res.statusCode).toBe(200)
     const [sql, params] = queryMock.mock.calls.find(([s]) => s.includes('FROM tasks t') && !s.includes('WHERE t.id'))
     expect(sql).toContain('t.assignee_id = $1')
-    expect(sql).toContain('t.priority = $2')
+    expect(sql).toContain('t.priority IN ($2)')
     expect(sql).toContain('t.task_type_id = $3')
     expect(sql).toContain('t.partner_name ILIKE $4')
     expect(params).toEqual(['assignee1', 'high', 'tt1', '%PartnerX%'])
+  })
+
+  it('accepts a comma-separated status filter and matches any of them', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ query: { status: 'backlog,in_progress,waiting' } }), res)
+
+    expect(res.statusCode).toBe(200)
+    const [sql, params] = queryMock.mock.calls.find(([s]) => s.includes('FROM tasks t') && !s.includes('WHERE t.id'))
+    expect(sql).toContain('t.status IN ($1, $2, $3)')
+    expect(params).toEqual(['backlog', 'in_progress', 'waiting'])
+  })
+
+  it('accepts a comma-separated priority filter and matches any of them', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ query: { priority: 'critical,high' } }), res)
+
+    expect(res.statusCode).toBe(200)
+    const [sql, params] = queryMock.mock.calls.find(([s]) => s.includes('FROM tasks t') && !s.includes('WHERE t.id'))
+    expect(sql).toContain('t.priority IN ($1, $2)')
+    expect(params).toEqual(['critical', 'high'])
+  })
+
+  it('rejects a comma-separated status filter if any value is invalid', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ query: { status: 'backlog,not-a-status' } }), res)
+
+    expect(res.statusCode).toBe(400)
   })
 
   it('applies the free-text search filter across task name and notes', async () => {

@@ -2,14 +2,20 @@ import { useCallback, useState } from 'react'
 import { usePreferences } from '../hooks/usePreferences.js'
 import { useTasks } from '../hooks/useTasks.js'
 import { useApiClient } from '../lib/apiClient.js'
+import { TASK_STATUSES } from '../lib/constants.js'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import NewTaskModal from '../components/tasks/NewTaskModal.jsx'
 import TaskSidePanel from '../components/tasks/TaskSidePanel.jsx'
 import TaskTable from '../components/tasks/TaskTable.jsx'
 import TaskToolbar from '../components/tasks/TaskToolbar.jsx'
 
+// Done tasks are hidden on first load — completed work isn't the thing
+// you're triaging day to day. Still fully visible/toggleable via the
+// Status filter chip, this only sets the starting selection.
+const DEFAULT_STATUS_FILTER = TASK_STATUSES.filter((status) => status !== 'done')
+
 export default function TasksPage() {
-  const [filters, setFilters] = useState({ sort_by: undefined, sort_dir: undefined })
+  const [filters, setFilters] = useState({ status: DEFAULT_STATUS_FILTER, sort_by: undefined, sort_dir: undefined })
   const { tasks, loading, error, refresh, updateTaskInPlace } = useTasks(filters)
   const { preferences, updatePreferences } = usePreferences()
   const apiClient = useApiClient()

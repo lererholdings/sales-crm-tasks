@@ -1097,6 +1097,8 @@ _Goal: the toolbar is fully functional_
 
 **Also bundled into this milestone** (per [issue #10](https://github.com/lererholdings/sales-crm-tasks/issues/10), tagged to Milestone 6 since it's the same filter-UI infrastructure): an admin-only "Show deleted" toggle in the toolbar, wiring the already-existing `?include_deleted=true` API param (Milestone 4) to the task table for the first time. Deleted tasks render with a `(deleted)` tag and dimmed row, matching the existing archived-account convention (see [issue #5](https://github.com/lererholdings/sales-crm-tasks/issues/5)'s decision log entry) rather than inventing a new visual pattern. Members never see the control; the backend 403s them regardless if attempted directly.
 
+**Revised per review before merge:** Status and Priority became multi-select (checkboxes, `IN (...)` server-side instead of `=`) rather than single-value — day-to-day triage usually means "show me backlog + in progress + waiting," not one status at a time. The Status filter also now defaults to every status except Done on first load (still just a starting selection — fully visible/togglable via the chip), since completed work isn't what you're triaging.
+
 **Checkpoint ✅**
 - Filtering by status, assignee, priority, type, partner all work
 - Free text search filters the table in real time

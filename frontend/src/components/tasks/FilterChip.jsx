@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { CHIP_ACTIVE_CLASSES, CHIP_IDLE_CLASSES } from '../../lib/chipStyles.js'
 
-// Two modes, matching what GET /api/tasks accepts per param:
-// - 'select' (default): exact-match filter (status, assignee_id, priority,
-//   task_type_id) — dropdown list of options, single choice, "Clear" entry.
+// Three modes, matching what GET /api/tasks accepts per param:
+// - 'select' (default): exact-match filter (assignee_id, task_type_id) —
+//   dropdown list of options, single choice, closes on pick, "Clear" entry.
+// - 'multi': status/priority accept a comma-separated list matched with
+//   `IN (...)` server-side — checkboxes, dropdown stays open across picks,
+//   "Clear all" entry. `value` is an array; `onChange` receives the next
+//   array (never null — an empty array means "no filter").
 // - 'text': substring filter (partner_name is matched with ILIKE on the
 //   server) — a small debounced text input instead of a fixed option list.
 export default function FilterChip({ icon, label, options = [], value, onChange, mode = 'select' }) {
@@ -35,8 +39,15 @@ export default function FilterChip({ icon, label, options = [], value, onChange,
   }, [mode, open, text, value, onChange])
 
   const selected = mode === 'select' ? options.find((o) => o.value === value) : null
-  const active = mode === 'select' ? Boolean(selected) : Boolean(value)
+  // A multi-select chip only reads as "actively filtering" when it excludes
+  // at least one option — 0 selected or all selected both mean "no real
+  // filter applied," same as the idle state for the other modes.
+  const isPartialMultiSelect = mode === 'multi' && value.length > 0 && value.length < options.length
+  const active = mode === 'select' ? Boolean(selected) : mode === 'multi' ? isPartialMultiSelect : Boolean(value)
   const filtered = query ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase())) : options
+
+  const chipLabel =
+    mode === 'select' ? (selected?.label ?? label) : mode === 'multi' ? (isPartialMultiSelect ? `${label} (${value.length})` : label) : value || label
 
   return (
     <div className="relative" ref={ref}>
@@ -46,7 +57,7 @@ export default function FilterChip({ icon, label, options = [], value, onChange,
         className={`inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-[12px] ${active ? CHIP_ACTIVE_CLASSES : CHIP_IDLE_CLASSES}`}
       >
         {icon && <i className={`ti ${icon} text-[13px]`} />}
-        {mode === 'select' ? selected?.label ?? label : value || label}
+        {chipLabel}
       </button>
 
       {open && (
@@ -74,6 +85,35 @@ export default function FilterChip({ icon, label, options = [], value, onChange,
                   <i className="ti ti-x text-[13px]" />
                 </button>
               )}
+            </div>
+          ) : mode === 'multi' ? (
+            <div className="max-h-48 overflow-auto p-1">
+              {value.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onChange([])}
+                  className="block w-full rounded-md px-2.5 py-1.5 text-left text-[13px] text-text-secondary hover:bg-bg-raised"
+                >
+                  Clear all
+                </button>
+              )}
+              {options.map((option) => {
+                const checked = value.includes(option.value)
+                return (
+                  <label
+                    key={option.value}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-text-primary hover:bg-bg-raised"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => onChange(checked ? value.filter((v) => v !== option.value) : [...value, option.value])}
+                      className="h-3.5 w-3.5"
+                    />
+                    {option.label}
+                  </label>
+                )
+              })}
             </div>
           ) : (
             <>

@@ -23,9 +23,9 @@ export default function TaskToolbar({ filters, onFilterChange, preferences, onRe
   return (
     <div className="flex items-center gap-2 border-b border-border bg-bg-surface p-3">
       <SearchInput value={filters.search} onChange={setFilter('search')} />
-      <FilterChip icon="ti-filter" label="Status" options={STATUS_OPTIONS} value={filters.status} onChange={setFilter('status')} />
+      <FilterChip icon="ti-filter" label="Status" mode="multi" options={STATUS_OPTIONS} value={filters.status ?? []} onChange={setFilter('status')} />
       <FilterChip icon="ti-user" label="Assignee" options={assigneeOptions} value={filters.assignee_id} onChange={setFilter('assignee_id')} />
-      <FilterChip icon="ti-flag" label="Priority" options={PRIORITY_OPTIONS} value={filters.priority} onChange={setFilter('priority')} />
+      <FilterChip icon="ti-flag" label="Priority" mode="multi" options={PRIORITY_OPTIONS} value={filters.priority ?? []} onChange={setFilter('priority')} />
       <FilterChip icon="ti-tag" label="Type" options={typeOptions} value={filters.task_type_id} onChange={setFilter('task_type_id')} />
       <FilterChip icon="ti-building" label="Partner" mode="text" value={filters.partner_name} onChange={setFilter('partner_name')} />
       {currentUser?.role === 'admin' && (

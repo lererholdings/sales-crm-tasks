@@ -54,7 +54,7 @@ describe('TaskToolbar', () => {
     expect(screen.getByText('Partner')).toBeTruthy()
   })
 
-  it('updates filters when a status is picked from the Status chip', async () => {
+  it('updates filters with an array when a status is checked from the Status chip', async () => {
     const onFilterChange = vi.fn()
     render(
       <TaskToolbar
@@ -70,7 +70,37 @@ describe('TaskToolbar', () => {
     fireEvent.click(screen.getByText('Status'))
     fireEvent.click(screen.getByText('Backlog'))
 
-    expect(onFilterChange).toHaveBeenCalledWith(expect.objectContaining({ status: 'backlog' }))
+    expect(onFilterChange).toHaveBeenCalledWith(expect.objectContaining({ status: ['backlog'] }))
+  })
+
+  it('accumulates multiple status checkboxes into one array', async () => {
+    const onFilterChange = vi.fn()
+    const { rerender } = render(
+      <TaskToolbar
+        filters={{}}
+        onFilterChange={onFilterChange}
+        preferences={DEFAULT_PREFERENCES}
+        onReorderColumns={vi.fn()}
+        onToggleColumnVisibility={vi.fn()}
+        onNewTask={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Status'))
+    fireEvent.click(screen.getByText('Backlog'))
+    rerender(
+      <TaskToolbar
+        filters={{ status: ['backlog'] }}
+        onFilterChange={onFilterChange}
+        preferences={DEFAULT_PREFERENCES}
+        onReorderColumns={vi.fn()}
+        onToggleColumnVisibility={vi.fn()}
+        onNewTask={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByText('Waiting'))
+
+    expect(onFilterChange).toHaveBeenLastCalledWith(expect.objectContaining({ status: ['backlog', 'waiting'] }))
   })
 
   it('populates the Assignee chip from useUsers', async () => {

@@ -54,6 +54,63 @@ describe('FilterChip — select mode', () => {
   })
 })
 
+describe('FilterChip — multi mode', () => {
+  it('shows the plain label when nothing is selected', () => {
+    render(<FilterChip label="Status" mode="multi" options={OPTIONS} value={[]} onChange={vi.fn()} />)
+    expect(screen.getByText('Status')).toBeTruthy()
+  })
+
+  it('checking an option calls onChange with an array containing it', () => {
+    const onChange = vi.fn()
+    render(<FilterChip label="Status" mode="multi" options={OPTIONS} value={[]} onChange={onChange} />)
+
+    fireEvent.click(screen.getByText('Status'))
+    fireEvent.click(screen.getByText('Backlog'))
+
+    expect(onChange).toHaveBeenCalledWith(['backlog'])
+  })
+
+  it('unchecking an already-selected option removes it from the array', () => {
+    const onChange = vi.fn()
+    render(<FilterChip label="Status" mode="multi" options={OPTIONS} value={['backlog', 'done']} onChange={onChange} />)
+
+    fireEvent.click(screen.getByText('Status'))
+    fireEvent.click(screen.getByText('Backlog'))
+
+    expect(onChange).toHaveBeenCalledWith(['done'])
+  })
+
+  it('shows a count in the chip label when a strict subset is selected, and stays open after picking', () => {
+    const onChange = vi.fn()
+    render(<FilterChip label="Status" mode="multi" options={OPTIONS} value={['backlog']} onChange={onChange} />)
+
+    expect(screen.getByText('Status (1)')).toBeTruthy()
+    fireEvent.click(screen.getByText('Status (1)'))
+    fireEvent.click(screen.getByText('Done'))
+
+    expect(onChange).toHaveBeenCalledWith(['backlog', 'done'])
+    // Dropdown is still open (multi-select doesn't auto-close on pick) —
+    // the option list should still be visible.
+    expect(screen.getByText('Done')).toBeTruthy()
+  })
+
+  it('shows the plain label (not a count) when every option is selected', () => {
+    render(<FilterChip label="Status" mode="multi" options={OPTIONS} value={['backlog', 'done']} onChange={vi.fn()} />)
+    expect(screen.getByText('Status')).toBeTruthy()
+    expect(screen.queryByText('Status (2)')).toBeFalsy()
+  })
+
+  it('clears the whole selection via "Clear all"', () => {
+    const onChange = vi.fn()
+    render(<FilterChip label="Status" mode="multi" options={OPTIONS} value={['backlog']} onChange={onChange} />)
+
+    fireEvent.click(screen.getByText('Status (1)'))
+    fireEvent.click(screen.getByText('Clear all'))
+
+    expect(onChange).toHaveBeenCalledWith([])
+  })
+})
+
 describe('FilterChip — text mode', () => {
   beforeEach(() => {
     vi.useFakeTimers()
