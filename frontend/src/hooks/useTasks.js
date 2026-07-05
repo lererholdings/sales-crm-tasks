@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useApiClient } from '../lib/apiClient.js'
 
-export function useTasks() {
+// filters: { status, assignee_id, priority, task_type_id, partner_name, search, sort_by, sort_dir }
+// passed straight through as GET /api/tasks query params. Callers should keep
+// this object referentially stable (e.g. one useState in TasksPage, updated
+// immutably) so refresh's identity — and this effect — only changes when a
+// filter actually changes, not on every unrelated re-render.
+export function useTasks(filters = {}) {
   const apiClient = useApiClient()
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -11,14 +16,19 @@ export function useTasks() {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.get('/tasks')
+      const params = new URLSearchParams()
+      for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== null && value !== '') params.set(key, value)
+      }
+      const qs = params.toString()
+      const data = await apiClient.get(qs ? `/tasks?${qs}` : '/tasks')
       setTasks(data)
     } catch (err) {
       setError(err)
     } finally {
       setLoading(false)
     }
-  }, [apiClient])
+  }, [apiClient, filters])
 
   useEffect(() => {
     refresh()

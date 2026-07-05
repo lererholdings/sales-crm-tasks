@@ -116,6 +116,10 @@
   --color-group-tag-bg: var(--group-tag-bg);
   --color-group-tag-text: var(--group-tag-text);
 
+  --color-chip-active-bg: var(--chip-active-bg);
+  --color-chip-active-border: var(--chip-active-border);
+  --color-chip-active-text: var(--chip-active-text);
+
   --color-badge-crit-bg: var(--badge-crit-bg);
   --color-badge-crit-text: var(--badge-crit-text);
   --color-badge-high-bg: var(--badge-high-bg);

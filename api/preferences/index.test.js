@@ -1,0 +1,138 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const queryMock = vi.fn()
+vi.mock('../../lib/db.js', () => ({ query: (...args) => queryMock(...args) }))
+
+const verifyTokenMock = vi.fn()
+vi.mock('@clerk/backend', () => ({
+  verifyToken: (...args) => verifyTokenMock(...args),
+  createClerkClient: () => ({ users: { getUser: vi.fn() } }),
+}))
+
+const handler = (await import('./index.js')).default
+
+const CALLER_ROW = { id: 'caller-id', role: 'member', display_name: 'Caller', email: 'c@x.com' }
+
+function mockRes() {
+  return {
+    statusCode: null,
+    body: null,
+    status(code) {
+      this.statusCode = code
+      return this
+    },
+    json(payload) {
+      this.body = payload
+    },
+  }
+}
+
+function authedReq(overrides = {}) {
+  return { method: 'GET', query: {}, headers: { authorization: 'Bearer good' }, ...overrides }
+}
+
+describe('GET /api/preferences', () => {
+  beforeEach(() => {
+    queryMock.mockReset()
+    verifyTokenMock.mockResolvedValue({ sub: 'clerk_caller' })
+  })
+
+  it('returns defaults when no preferences row exists yet', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [CALLER_ROW] })
+      .mockResolvedValueOnce({ rows: [] })
+
+    const res = mockRes()
+    await handler(authedReq(), res)
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toEqual({ column_order: [], column_visibility: {}, notes_preview_count: 2 })
+  })
+
+  it('returns the stored preferences row when one exists', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [CALLER_ROW] })
+      .mockResolvedValueOnce({
+        rows: [{ column_order: ['status', 'priority'], column_visibility: { eta: false }, notes_preview_count: 5 }],
+      })
+
+    const res = mockRes()
+    await handler(authedReq(), res)
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toEqual({
+      column_order: ['status', 'priority'],
+      column_visibility: { eta: false },
+      notes_preview_count: 5,
+    })
+  })
+})
+
+describe('PATCH /api/preferences', () => {
+  beforeEach(() => {
+    queryMock.mockReset()
+    verifyTokenMock.mockResolvedValue({ sub: 'clerk_caller' })
+  })
+
+  it('rejects an empty body', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: {} }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a non-array column_order', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { column_order: 'status' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a non-object column_visibility', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { column_visibility: ['eta'] } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('updates only column_order and leaves other fields alone (partial update)', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [CALLER_ROW] })
+      .mockResolvedValueOnce({
+        rows: [{ column_order: ['priority', 'status'], column_visibility: { eta: false }, notes_preview_count: 3 }],
+      })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { column_order: ['priority', 'status'] } }), res)
+
+    expect(res.statusCode).toBe(200)
+    const [sql, params] = queryMock.mock.calls[1]
+    expect(sql).toContain('ON CONFLICT (user_id) DO UPDATE')
+    // booleans flagging which fields were actually provided in the request
+    expect(params[4]).toBe(true) // column_order provided
+    expect(params[5]).toBe(false) // column_visibility not provided
+    expect(params[6]).toBe(false) // notes_preview_count not provided
+    expect(res.body.column_order).toEqual(['priority', 'status'])
+    expect(res.body.notes_preview_count).toBe(3)
+  })
+
+  it('updates notes_preview_count only', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [CALLER_ROW] })
+      .mockResolvedValueOnce({
+        rows: [{ column_order: [], column_visibility: {}, notes_preview_count: 4 }],
+      })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { notes_preview_count: 4 } }), res)
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body.notes_preview_count).toBe(4)
+  })
+})
