@@ -1095,11 +1095,14 @@ _Goal: the toolbar is fully functional_
 7. Apply sort on column header click (sort_by + sort_dir params)
 8. Tests: `GET /api/tasks` filter param combinations (status, assignee, priority, type, partner, search, sort_by/sort_dir), preferences endpoints (partial-update semantics), `ColumnManager` reorder/toggle interaction test
 
+**Also bundled into this milestone** (per [issue #10](https://github.com/lererholdings/sales-crm-tasks/issues/10), tagged to Milestone 6 since it's the same filter-UI infrastructure): an admin-only "Show deleted" toggle in the toolbar, wiring the already-existing `?include_deleted=true` API param (Milestone 4) to the task table for the first time. Deleted tasks render with a `(deleted)` tag and dimmed row, matching the existing archived-account convention (see [issue #5](https://github.com/lererholdings/sales-crm-tasks/issues/5)'s decision log entry) rather than inventing a new visual pattern. Members never see the control; the backend 403s them regardless if attempted directly.
+
 **Checkpoint ✅**
 - Filtering by status, assignee, priority, type, partner all work
 - Free text search filters the table in real time
 - Column show/hide and reorder persists across browser refresh and devices
 - Sorting by any column works
+- Admins can toggle visibility of soft-deleted tasks; members never see the control or the tasks
 - CI is green
 
 ---

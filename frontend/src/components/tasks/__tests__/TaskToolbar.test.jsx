@@ -28,6 +28,7 @@ describe('TaskToolbar', () => {
     getTokenMock.mockReset()
     getTokenMock.mockResolvedValue('token')
     mockFetchByUrl({
+      '/api/users?me=true': { id: 'me1', display_name: 'Caller', role: 'member', email: 'caller@x.com' },
       '/api/users': [{ id: 'u1', display_name: 'Sara', role: 'member', email: 's@x.com' }],
       '/api/task-types': [{ id: 'tt1', category: 'pre-sale', name: 'RFP', active: true }],
     })
@@ -86,6 +87,46 @@ describe('TaskToolbar', () => {
 
     fireEvent.click(screen.getByText('Assignee'))
     await waitFor(() => expect(screen.getByText('Sara')).toBeTruthy())
+  })
+
+  it('does not render the Show deleted toggle for a member', async () => {
+    render(
+      <TaskToolbar
+        filters={{}}
+        onFilterChange={vi.fn()}
+        preferences={DEFAULT_PREFERENCES}
+        onReorderColumns={vi.fn()}
+        onToggleColumnVisibility={vi.fn()}
+        onNewTask={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(screen.getByText('Status')).toBeTruthy())
+    expect(screen.queryByText('Show deleted')).toBeFalsy()
+  })
+
+  it('renders the Show deleted toggle for an admin and wires it to include_deleted', async () => {
+    mockFetchByUrl({
+      '/api/users?me=true': { id: 'me1', display_name: 'Admin', role: 'admin', email: 'admin@x.com' },
+      '/api/users': [{ id: 'u1', display_name: 'Sara', role: 'member', email: 's@x.com' }],
+      '/api/task-types': [{ id: 'tt1', category: 'pre-sale', name: 'RFP', active: true }],
+    })
+    const onFilterChange = vi.fn()
+    render(
+      <TaskToolbar
+        filters={{}}
+        onFilterChange={onFilterChange}
+        preferences={DEFAULT_PREFERENCES}
+        onReorderColumns={vi.fn()}
+        onToggleColumnVisibility={vi.fn()}
+        onNewTask={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(screen.getByText('Show deleted')).toBeTruthy())
+    fireEvent.click(screen.getByText('Show deleted'))
+
+    expect(onFilterChange).toHaveBeenCalledWith(expect.objectContaining({ include_deleted: true }))
   })
 
   it('calls onNewTask when the New task button is clicked', () => {

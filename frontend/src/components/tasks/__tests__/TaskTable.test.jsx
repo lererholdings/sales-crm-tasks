@@ -67,6 +67,29 @@ describe('TaskTable', () => {
     expect(onOpen).toHaveBeenCalledWith(tasks[0])
   })
 
+  it('marks a soft-deleted task with a "(deleted)" tag and dims the row', () => {
+    render(
+      <TaskTable
+        tasks={[task({ deleted_at: '2026-07-01T00:00:00Z' })]}
+        onOpen={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDeleteRequest={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('(deleted)')).toBeTruthy()
+    const row = screen.getByText('RFP response').closest('tr')
+    expect(row.className).toContain('opacity-60')
+  })
+
+  it('does not tag or dim an active task', () => {
+    render(<TaskTable tasks={[task()]} onOpen={vi.fn()} onDuplicate={vi.fn()} onDeleteRequest={vi.fn()} />)
+
+    expect(screen.queryByText('(deleted)')).toBeFalsy()
+    const row = screen.getByText('RFP response').closest('tr')
+    expect(row.className).not.toContain('opacity-60')
+  })
+
   it('calls onSort with the backend sort key when a sortable header is clicked', () => {
     const onSort = vi.fn()
     render(<TaskTable tasks={[task()]} onOpen={vi.fn()} onDuplicate={vi.fn()} onDeleteRequest={vi.fn()} onSort={onSort} />)

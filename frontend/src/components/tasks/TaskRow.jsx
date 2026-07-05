@@ -53,9 +53,13 @@ function renderCell(columnKey, task, eta) {
 // render would defeat memo regardless of whether `task` itself changed.
 function TaskRow({ task, columns, onOpen, onDuplicate, onDeleteRequest }) {
   const eta = formatEta(task.eta)
+  const deleted = Boolean(task.deleted_at)
 
   return (
-    <tr className="group cursor-pointer border-b border-border bg-bg-surface hover:bg-bg-raised" onClick={() => onOpen(task)}>
+    <tr
+      className={`group cursor-pointer border-b border-border bg-bg-surface hover:bg-bg-raised ${deleted ? 'opacity-60' : ''}`}
+      onClick={() => onOpen(task)}
+    >
       <td className="px-3 py-2">
         <TaskNameCell task={task} onOpen={onOpen} onDuplicate={onDuplicate} onDeleteRequest={onDeleteRequest} />
       </td>

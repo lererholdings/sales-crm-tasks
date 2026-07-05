@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-
-const activeClasses = 'border-chip-active-border bg-chip-active-bg text-chip-active-text'
-const idleClasses = 'border-border bg-bg-surface text-text-secondary'
+import { CHIP_ACTIVE_CLASSES, CHIP_IDLE_CLASSES } from '../../lib/chipStyles.js'
 
 // Two modes, matching what GET /api/tasks accepts per param:
 // - 'select' (default): exact-match filter (status, assignee_id, priority,
@@ -45,7 +43,7 @@ export default function FilterChip({ icon, label, options = [], value, onChange,
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-[12px] ${active ? activeClasses : idleClasses}`}
+        className={`inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-[12px] ${active ? CHIP_ACTIVE_CLASSES : CHIP_IDLE_CLASSES}`}
       >
         {icon && <i className={`ti ${icon} text-[13px]`} />}
         {mode === 'select' ? selected?.label ?? label : value || label}
