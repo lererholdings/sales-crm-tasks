@@ -58,4 +58,18 @@ describe('GET /api/users', () => {
 
     expect(res.statusCode).toBe(401)
   })
+
+  it('?me=true returns only the caller, without listing everyone', async () => {
+    verifyTokenMock.mockResolvedValue({ sub: 'caller' })
+    queryMock.mockResolvedValueOnce({
+      rows: [{ id: 'caller-id', role: 'member', display_name: 'Caller', email: 'c@x.com' }],
+    })
+
+    const res = mockRes()
+    await handler({ method: 'GET', query: { me: 'true' }, headers: { authorization: 'Bearer good' } }, res)
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toEqual({ id: 'caller-id', display_name: 'Caller', email: 'c@x.com', role: 'member' })
+    expect(queryMock).toHaveBeenCalledTimes(1)
+  })
 })

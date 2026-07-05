@@ -13,6 +13,8 @@
   "dependencies": {
     "@clerk/clerk-react": "^5.61.8",
     "@tailwindcss/vite": "^4.3.2",
+    "dompurify": "^3.4.11",
+    "marked": "^18.0.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
