@@ -1,21 +1,24 @@
 import { withAuth } from '../../lib/auth.js'
 import { query } from '../../lib/db.js'
 
+const VALID_THEMES = ['light', 'dark']
+
 const DEFAULTS = {
   column_order: [],
   column_visibility: {},
   notes_preview_count: 2,
   accounts_column_order: [],
   accounts_column_visibility: {},
+  theme: null,
 }
 const JSON_ARRAY_FIELDS = ['column_order', 'accounts_column_order']
 const JSON_OBJECT_FIELDS = ['column_visibility', 'accounts_column_visibility']
-const PATCHABLE_FIELDS = [...JSON_ARRAY_FIELDS, ...JSON_OBJECT_FIELDS, 'notes_preview_count']
+const PATCHABLE_FIELDS = [...JSON_ARRAY_FIELDS, ...JSON_OBJECT_FIELDS, 'notes_preview_count', 'theme']
 
 async function handleGet(req, res, user) {
   const { rows } = await query(
     `SELECT column_order, column_visibility, notes_preview_count,
-            accounts_column_order, accounts_column_visibility
+            accounts_column_order, accounts_column_visibility, theme
      FROM user_preferences WHERE user_id = $1`,
     [user.id],
   )
@@ -41,6 +44,9 @@ async function handlePatch(req, res, user) {
   if ('notes_preview_count' in body && !Number.isInteger(body.notes_preview_count)) {
     return res.status(400).json({ error: 'notes_preview_count must be an integer' })
   }
+  if ('theme' in body && !VALID_THEMES.includes(body.theme)) {
+    return res.status(400).json({ error: `theme must be one of: ${VALID_THEMES.join(', ')}` })
+  }
 
   // Upsert: a user_preferences row may not exist yet (nothing creates one at
   // signup). ON CONFLICT covers first-ever PATCH, while the CASE/EXCLUDED
@@ -49,16 +55,17 @@ async function handlePatch(req, res, user) {
   const { rows } = await query(
     `INSERT INTO user_preferences (
        user_id, column_order, column_visibility, notes_preview_count,
-       accounts_column_order, accounts_column_visibility
+       accounts_column_order, accounts_column_visibility, theme
      )
-     VALUES ($1, $2, $3, $4, $5, $6)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT (user_id) DO UPDATE SET
-       column_order = CASE WHEN $7 THEN EXCLUDED.column_order ELSE user_preferences.column_order END,
-       column_visibility = CASE WHEN $8 THEN EXCLUDED.column_visibility ELSE user_preferences.column_visibility END,
-       notes_preview_count = CASE WHEN $9 THEN EXCLUDED.notes_preview_count ELSE user_preferences.notes_preview_count END,
-       accounts_column_order = CASE WHEN $10 THEN EXCLUDED.accounts_column_order ELSE user_preferences.accounts_column_order END,
-       accounts_column_visibility = CASE WHEN $11 THEN EXCLUDED.accounts_column_visibility ELSE user_preferences.accounts_column_visibility END
-     RETURNING column_order, column_visibility, notes_preview_count, accounts_column_order, accounts_column_visibility`,
+       column_order = CASE WHEN $8 THEN EXCLUDED.column_order ELSE user_preferences.column_order END,
+       column_visibility = CASE WHEN $9 THEN EXCLUDED.column_visibility ELSE user_preferences.column_visibility END,
+       notes_preview_count = CASE WHEN $10 THEN EXCLUDED.notes_preview_count ELSE user_preferences.notes_preview_count END,
+       accounts_column_order = CASE WHEN $11 THEN EXCLUDED.accounts_column_order ELSE user_preferences.accounts_column_order END,
+       accounts_column_visibility = CASE WHEN $12 THEN EXCLUDED.accounts_column_visibility ELSE user_preferences.accounts_column_visibility END,
+       theme = CASE WHEN $13 THEN EXCLUDED.theme ELSE user_preferences.theme END
+     RETURNING column_order, column_visibility, notes_preview_count, accounts_column_order, accounts_column_visibility, theme`,
     [
       user.id,
       JSON.stringify(body.column_order ?? DEFAULTS.column_order),
@@ -66,11 +73,13 @@ async function handlePatch(req, res, user) {
       body.notes_preview_count ?? DEFAULTS.notes_preview_count,
       JSON.stringify(body.accounts_column_order ?? DEFAULTS.accounts_column_order),
       JSON.stringify(body.accounts_column_visibility ?? DEFAULTS.accounts_column_visibility),
+      body.theme ?? DEFAULTS.theme,
       provided.includes('column_order'),
       provided.includes('column_visibility'),
       provided.includes('notes_preview_count'),
       provided.includes('accounts_column_order'),
       provided.includes('accounts_column_visibility'),
+      provided.includes('theme'),
     ],
   )
   res.status(200).json(rows[0])

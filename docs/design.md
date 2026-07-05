@@ -1115,12 +1115,14 @@ _Goal: the toolbar is fully functional_
 _Goal: theme toggle working in the real app, matching the mockup_
 
 **Tasks:**
-1. Define CSS custom properties for all theme tokens (light + dark) in global stylesheet — matching the mockup colour values exactly
-2. Implement `data-theme` toggle on `<html>` element
-3. Add round icon-only theme toggle button to `Navbar` (moon / sun)
+1. ~~Define CSS custom properties for all theme tokens (light + dark) in global stylesheet — matching the mockup colour values exactly~~ — already built in Milestone 1's scaffold (`index.css`), since the mockup UI shell needed theme tokens from the start
+2. ~~Implement `data-theme` toggle on `<html>` element~~ — already built alongside the CSS tokens
+3. ~~Add round icon-only theme toggle button to `Navbar` (moon / sun)~~ — already built
 4. Persist theme preference to `user_preferences` table (add `theme` field — new migration in `supabase/migrations/`)
-5. Respect OS `prefers-color-scheme` on first load if no saved preference
+5. ~~Respect OS `prefers-color-scheme` on first load if no saved preference~~ — already built (`useTheme.js`'s `getInitialTheme`)
 6. Tests: migration adds the column without breaking existing rows (default), toggle updates `data-theme` and fires the `PATCH /api/preferences` call, first-load fallback to OS preference when no saved theme exists
+
+This milestone's only remaining task when picked up was #4 + its tests: `useTheme` was already fully working, but only via `localStorage` (session/browser-local, not account-level) — see the comment it shipped with in Milestone 1, anticipating this exact gap. Kept the instant `localStorage`/OS-preference first paint (avoids a flash of the wrong theme while the network round-trip is in flight) and layered a `GET /api/preferences` reconciliation on mount plus a `PATCH` on every toggle on top of it, rather than replacing local persistence outright.
 
 **Checkpoint ✅**
 - Toggle switches between light and dark instantly
@@ -1276,6 +1278,7 @@ Visual mockups are saved as standalone interactive HTML files in `docs/mockups/`
 | Access gate ownership | Clerk is the sole access gate; Vercel Deployment Protection restricted to "Only Preview Deployments" | Avoids running two overlapping auth systems in production. Vercel protection is useful for previews (keeps in-progress work private) but must not gate production once real users need to log in via Clerk. See [issue #1](https://github.com/lererholdings/sales-crm-tasks/issues/1). |
 | Task column reorder/toggle scope | `task_name` excluded from `ColumnManager` — always first, never hidden | It hosts `TaskNameCell`'s context menu (edit/duplicate/delete/link-to-account); hiding it would hide those actions with no replacement affordance. The other 8 columns are fully reorderable and toggleable per the spec. |
 | Partner filter chip | Free-text input, not a dropdown of exact values | `GET /api/tasks`'s `partner_name` param is matched with `ILIKE '%...%'` (substring), not `=` — there's no partners table to source an exact option list from, and a text filter matches the backend's actual matching semantics. |
+| Theme persistence | `localStorage` first paint + `user_preferences.theme` reconciled on mount, not DB-only | A pure DB-backed theme would need a network round-trip before the first paint could pick the right theme, causing a flash of the wrong one. Keeping the pre-existing `localStorage`/OS-preference fallback as the instant path and treating the DB value as the cross-device source of truth (reconciled shortly after mount, written on every toggle) gets both: no flash, and syncs across devices per the Milestone 7 checkpoint. `theme` is nullable — null specifically means "never set," distinct from an explicit choice. |
 | User scale ambition | Architecture should not assume a hard ceiling of ~5 users | Team is ~5 today, but avoid decisions that make later growth expensive: keep list endpoints paginated/indexed rather than fetch-all, keep Clerk/Supabase on tiers with headroom (Clerk free tier supports up to 10,000 MAU), and revisit rate limiting + `audit_log` retention in Milestone 9 with growth in mind, not just current volume. Not a reason to over-engineer now — just don't paint into a corner. |
 | Database access pattern | Direct Postgres via the `pg` driver against a pooled connection string, not `@supabase/supabase-js` | Matches the stated migration goal in section 4 — moving off Supabase later means changing `DATABASE_URL`, not rewriting every query to drop `.from()`/PostgREST calls. Vercel functions are serverless/short-lived, so `DATABASE_URL` must be the Transaction pooler string (port 6543, Supavisor/pgbouncer), not the direct :5432 connection — direct connections exhaust Postgres's connection cap under serverless concurrency. |
 | Environment separation | Two Supabase projects: one for dev/preview, one for production | Set up in Milestone 2 rather than deferred, since no real data existed yet — the cheapest point to do this. Mirrors the Vercel Preview/Production split already in place. `DATABASE_URL` is scoped per-environment in Vercel; migrations are pushed to both projects (`supabase link --project-ref <ref>` per project, no single persistent link). |
