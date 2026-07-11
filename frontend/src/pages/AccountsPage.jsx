@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { usePreferences } from '../hooks/usePreferences.js'
 import { useAccounts } from '../hooks/useAccounts.js'
 import { useApiClient } from '../lib/apiClient.js'
@@ -22,7 +23,24 @@ export default function AccountsPage() {
   const { accounts, loading, error, refresh } = useAccounts(accountsFilters)
   const apiClient = useApiClient()
   const [showNewModal, setShowNewModal] = useState(false)
-  const [selectedAccountId, setSelectedAccountId] = useState(null)
+  // Deep-link entry point (e.g. "View account" from an audit log entry) —
+  // one-directional like TasksPage's ?taskId=, not synced URL state.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [selectedAccountId, setSelectedAccountId] = useState(() => searchParams.get('accountId'))
+
+  const handleCloseAccountPanel = useCallback(() => {
+    setSelectedAccountId(null)
+    if (searchParams.has('accountId')) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete('accountId')
+          return next
+        },
+        { replace: true },
+      )
+    }
+  }, [searchParams, setSearchParams])
 
   const handleSort = useCallback((sortKey) => {
     setFilters((prev) => ({
@@ -66,7 +84,7 @@ export default function AccountsPage() {
 
       {showNewModal && <NewAccountModal onClose={() => setShowNewModal(false)} onCreate={handleCreate} />}
 
-      <AccountSidePanel accountId={selectedAccountId} onClose={() => setSelectedAccountId(null)} onUpdated={refresh} />
+      <AccountSidePanel accountId={selectedAccountId} onClose={handleCloseAccountPanel} onUpdated={refresh} />
     </div>
   )
 }

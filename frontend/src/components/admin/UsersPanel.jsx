@@ -1,16 +1,13 @@
 import { useCurrentUser } from '../../hooks/useCurrentUser.js'
 import { useUsers } from '../../hooks/useUsers.js'
-import { useApiClient } from '../../lib/apiClient.js'
 import UserList from './UserList.jsx'
 
 export default function UsersPanel() {
-  const { users, loading, error, refresh } = useUsers()
+  const { users, loading, error, updateUserRole } = useUsers()
   const { user: currentUser } = useCurrentUser()
-  const apiClient = useApiClient()
 
   const handleChangeRole = async (id, role) => {
-    await apiClient.patch(`/users/${id}`, { role })
-    await refresh()
+    await updateUserRole(id, role)
   }
 
   return (

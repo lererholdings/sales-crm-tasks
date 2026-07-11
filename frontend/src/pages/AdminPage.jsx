@@ -1,14 +1,32 @@
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { useCurrentUser } from '../hooks/useCurrentUser.js'
 import AdminNav from '../components/admin/AdminNav.jsx'
 import AuditLogPanel from '../components/admin/AuditLogPanel.jsx'
 import TaskTypesPanel from '../components/admin/TaskTypesPanel.jsx'
 import UsersPanel from '../components/admin/UsersPanel.jsx'
 
+const VALID_TABS = ['task-types', 'users', 'audit-log']
+
 export default function AdminPage() {
   const { user: currentUser, loading } = useCurrentUser()
-  const [activeTab, setActiveTab] = useState('task-types')
+  // Deep-link entry point (e.g. from an audit log entry's "user"/"task_type"
+  // link). Unlike TasksPage's ?taskId= (which always lands via a route
+  // change from elsewhere, so a mount-time read is enough), a "user"/
+  // "task_type" audit link can point from the Audit Log tab back to another
+  // tab on this *same* route — a query-string-only navigation that doesn't
+  // remount AdminPage. So this does need to react to searchParams changing,
+  // not just read it once.
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get('tab')
+    return VALID_TABS.includes(tab) ? tab : 'task-types'
+  })
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (VALID_TABS.includes(tab)) setActiveTab(tab)
+  }, [searchParams])
 
   // Backend already 403s non-admin calls on every admin endpoint — this is
   // the UI-level mirror of that, not the actual enforcement. Waits for the

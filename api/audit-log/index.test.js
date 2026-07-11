@@ -25,6 +25,7 @@ const ENTRY_ROW = {
   user_display_name: 'John',
   task_id: 'task1',
   account_id: null,
+  task_name: 'RFP response',
 }
 
 function mockRes() {
@@ -93,6 +94,8 @@ describe('GET /api/audit-log', () => {
       id: 'log1',
       entity_type: 'task',
       entity_id: 'task1',
+      entity_label: 'RFP response',
+      entity_link: { type: 'task', id: 'task1' },
       user: { id: 'u2', display_name: 'John' },
       action: 'updated',
       changed_fields: { status: { from: 'backlog', to: 'in_progress' } },
@@ -194,5 +197,84 @@ describe('GET /api/audit-log', () => {
     const [, params] = queryMock.mock.calls[2]
     expect(params[0]).toBe(500) // capped at MAX_LIMIT
     expect(params[1]).toBe(50)
+  })
+})
+
+describe('entity label and link resolution', () => {
+  beforeEach(() => {
+    queryMock.mockReset()
+    verifyTokenMock.mockResolvedValue({ sub: 'clerk_caller' })
+  })
+
+  async function entryFor(overrides) {
+    queryMock.mockImplementation(mockQueryImpl({ entries: [{ ...ENTRY_ROW, ...overrides }] }))
+    const res = mockRes()
+    await handler(authedReq(), res)
+    return res.body.entries[0]
+  }
+
+  it('task_note links to its parent task and reads "Note on <task name>"', async () => {
+    const entry = await entryFor({
+      entity_type: 'task_note',
+      entity_id: 'note1',
+      task_id: 'task1',
+      task_name: 'RFP response',
+    })
+
+    expect(entry.entity_label).toBe('Note on RFP response')
+    expect(entry.entity_link).toEqual({ type: 'task', id: 'task1' })
+  })
+
+  it('account links to the account and shows its name', async () => {
+    const entry = await entryFor({
+      entity_type: 'account',
+      entity_id: 'acc1',
+      task_id: null,
+      account_id: 'acc1',
+      account_name: 'Acme Corp',
+      task_name: null,
+    })
+
+    expect(entry.entity_label).toBe('Acme Corp')
+    expect(entry.entity_link).toEqual({ type: 'account', id: 'acc1' })
+  })
+
+  it('user links to the Users tab (not a per-item page) and shows the target user\'s name', async () => {
+    const entry = await entryFor({
+      entity_type: 'user',
+      entity_id: 'u3',
+      task_id: null,
+      task_name: null,
+      target_user_name: 'Sara',
+    })
+
+    expect(entry.entity_label).toBe('Sara')
+    expect(entry.entity_link).toEqual({ type: 'user' })
+  })
+
+  it('task_type links to the Task Types tab and shows "category · name"', async () => {
+    const entry = await entryFor({
+      entity_type: 'task_type',
+      entity_id: 'tt1',
+      task_id: null,
+      task_name: null,
+      task_type_category: 'pre-sale',
+      task_type_name: 'RFP',
+    })
+
+    expect(entry.entity_label).toBe('pre-sale · RFP')
+    expect(entry.entity_link).toEqual({ type: 'task_type' })
+  })
+
+  it('falls back to a short id label with no link when the joined name is missing', async () => {
+    const entry = await entryFor({
+      entity_type: 'task_note',
+      entity_id: 'orphan-note-12345678',
+      task_id: null,
+      task_name: null,
+    })
+
+    expect(entry.entity_label).toBe('task_note · orphan-n')
+    expect(entry.entity_link).toBeNull()
   })
 })

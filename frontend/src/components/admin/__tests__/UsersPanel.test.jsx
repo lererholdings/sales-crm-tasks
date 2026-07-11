@@ -57,11 +57,18 @@ describe('UsersPanel', () => {
     expect(within(otherRow).getByDisplayValue('member').disabled).toBe(false)
   })
 
-  it('changes another user\'s role', async () => {
-    mockFetchByUrl({ '/api/users?me=true': ME, '/api/users': [ME, OTHER] })
+  it('changes another user\'s role, updating it in place without refetching the list', async () => {
+    mockFetchByUrl({
+      '/api/users?me=true': ME,
+      '/api/users': (url, opts) =>
+        opts?.method === 'PATCH' ? { id: 'u2', display_name: 'Sara', email: 's@x.com', role: 'admin' } : [ME, OTHER],
+    })
 
     render(<UsersPanel />)
     await waitFor(() => expect(screen.getByText('Sara')).toBeTruthy())
+    const listCallsBefore = global.fetch.mock.calls.filter(
+      ([url, opts]) => url === '/api/users' && (!opts || opts.method === undefined),
+    ).length
 
     const otherRow = screen.getByText('Sara').closest('tr')
     fireEvent.change(within(otherRow).getByDisplayValue('member'), { target: { value: 'admin' } })
@@ -72,5 +79,12 @@ describe('UsersPanel', () => {
       expect(patchCall[0]).toBe('/api/users/u2')
       expect(JSON.parse(patchCall[1].body)).toEqual({ role: 'admin' })
     })
+
+    await waitFor(() => expect(within(screen.getByText('Sara').closest('tr')).getByDisplayValue('admin')).toBeTruthy())
+
+    const listCallsAfter = global.fetch.mock.calls.filter(
+      ([url, opts]) => url === '/api/users' && (!opts || opts.method === undefined),
+    ).length
+    expect(listCallsAfter).toBe(listCallsBefore) // no refetch triggered
   })
 })

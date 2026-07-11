@@ -1,7 +1,28 @@
 import { Link } from 'react-router-dom'
 import { AUDIT_ACTION_TEXT_CLASS, formatAuditValue } from '../../lib/auditFormat.js'
 
+// user/task_type don't have a per-item page, so they link to the relevant
+// admin tab rather than a specific row — see api/audit-log/index.js's
+// deriveEntityDisplay for where entity_link is computed.
+function entityHref(link) {
+  if (!link) return null
+  switch (link.type) {
+    case 'task':
+      return `/tasks?taskId=${link.id}`
+    case 'account':
+      return `/accounts?accountId=${link.id}`
+    case 'user':
+      return '/admin?tab=users'
+    case 'task_type':
+      return '/admin?tab=task-types'
+    default:
+      return null
+  }
+}
+
 export default function AuditRow({ entry }) {
+  const href = entityHref(entry.entity_link)
+
   return (
     <tr className="border-b border-border align-top">
       <td className="whitespace-nowrap px-3 py-2 text-[12px] text-text-secondary">
@@ -9,11 +30,13 @@ export default function AuditRow({ entry }) {
       </td>
       <td className="px-3 py-2 text-[12px] text-text-secondary">{entry.user?.display_name ?? '—'}</td>
       <td className="px-3 py-2 text-[12px] text-text-secondary">
-        {entry.entity_type} <span className="text-text-muted">· {entry.entity_id.slice(0, 8)}</span>
-        {entry.task_id && (
-          <Link to={`/tasks?taskId=${entry.task_id}`} className="ml-2 text-accent hover:underline">
-            <i className="ti ti-external-link text-[11px]" /> View task
+        <span className="text-text-muted">{entry.entity_type}</span>{' '}
+        {href ? (
+          <Link to={href} className="text-accent hover:underline">
+            {entry.entity_label}
           </Link>
+        ) : (
+          entry.entity_label
         )}
       </td>
       <td

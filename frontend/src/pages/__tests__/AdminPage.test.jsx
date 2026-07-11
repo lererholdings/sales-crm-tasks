@@ -25,9 +25,9 @@ function mockFetchByUrl(routes) {
   })
 }
 
-function renderAtAdmin() {
+function renderAtAdmin(initialEntries = ['/admin']) {
   return render(
-    <MemoryRouter initialEntries={['/admin']}>
+    <MemoryRouter initialEntries={initialEntries}>
       <Routes>
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/tasks" element={<div>Tasks page</div>} />
@@ -88,6 +88,8 @@ describe('AdminPage', () => {
             id: 'log1',
             entity_type: 'task',
             entity_id: 'task1',
+            entity_label: 'RFP response',
+            entity_link: { type: 'task', id: 'task1' },
             user: { id: 'u2', display_name: 'Sara' },
             action: 'updated',
             changed_fields: { status: { from: 'backlog', to: 'in_progress' } },
@@ -104,5 +106,63 @@ describe('AdminPage', () => {
     fireEvent.click(screen.getByText('Audit Log'))
 
     await waitFor(() => expect(screen.getByText('updated')).toBeTruthy())
+  })
+
+  it('opens straight to the Users tab from a ?tab=users deep link', async () => {
+    mockFetchByUrl({
+      '/api/users?me=true': { id: 'u1', display_name: 'Admin', email: 'a@x.com', role: 'admin' },
+      '/api/users': [{ id: 'u2', display_name: 'Sara', email: 's@x.com', role: 'member' }],
+    })
+
+    renderAtAdmin(['/admin?tab=users'])
+
+    await waitFor(() => expect(screen.getByText('Sara')).toBeTruthy())
+  })
+
+  it('switches to the Users tab when an audit entry\'s "user" link is clicked (same-route navigation)', async () => {
+    mockFetchByUrl({
+      '/api/users?me=true': { id: 'u1', display_name: 'Admin', email: 'a@x.com', role: 'admin' },
+      '/api/users': [{ id: 'u2', display_name: 'Sara', email: 's@x.com', role: 'member' }],
+      '/api/audit-log': {
+        entries: [
+          {
+            id: 'log1',
+            entity_type: 'user',
+            entity_id: 'u2',
+            entity_label: 'Sara',
+            entity_link: { type: 'user' },
+            user: { id: 'u1', display_name: 'Admin' },
+            action: 'updated',
+            changed_fields: { role: { from: 'member', to: 'admin' } },
+            timestamp: '2026-06-15T10:00:00Z',
+          },
+        ],
+        total: 1,
+      },
+    })
+
+    renderAtAdmin()
+    await waitFor(() => expect(screen.getByText('Task Types')).toBeTruthy())
+
+    fireEvent.click(screen.getByText('Audit Log'))
+    await waitFor(() => expect(screen.getByText('updated')).toBeTruthy())
+
+    // This is a same-route navigation (/admin -> /admin?tab=users), which
+    // doesn't remount AdminPage — regression test for the mount-time-only
+    // initializer that missed this case.
+    fireEvent.click(screen.getAllByText('Sara')[0])
+
+    await waitFor(() => expect(screen.getByDisplayValue('member')).toBeTruthy())
+  })
+
+  it('falls back to Task Types for an unrecognized ?tab= value', async () => {
+    mockFetchByUrl({
+      '/api/users?me=true': { id: 'u1', display_name: 'Admin', email: 'a@x.com', role: 'admin' },
+      '/api/task-types': [{ id: 't1', category: 'pre-sale', name: 'Demo', active: true }],
+    })
+
+    renderAtAdmin(['/admin?tab=not-a-real-tab'])
+
+    await waitFor(() => expect(screen.getByText('Demo')).toBeTruthy())
   })
 })

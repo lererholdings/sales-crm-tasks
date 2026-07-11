@@ -1,25 +1,20 @@
 import { useTaskTypes } from '../../hooks/useTaskTypes.js'
-import { useApiClient } from '../../lib/apiClient.js'
 import NewTaskTypeForm from './NewTaskTypeForm.jsx'
 import TaskTypeList from './TaskTypeList.jsx'
 
 export default function TaskTypesPanel() {
-  const { taskTypes, loading, error, refresh } = useTaskTypes()
-  const apiClient = useApiClient()
+  const { taskTypes, loading, error, createTaskType, updateTaskType } = useTaskTypes()
 
   const handleCreate = async (payload) => {
-    await apiClient.post('/task-types', payload)
-    await refresh()
+    await createTaskType(payload)
   }
 
   const handleRename = async (id, name) => {
-    await apiClient.patch(`/task-types?id=${id}`, { name })
-    await refresh()
+    await updateTaskType(id, { name })
   }
 
   const handleToggleActive = async (id, active) => {
-    await apiClient.patch(`/task-types?id=${id}`, { active })
-    await refresh()
+    await updateTaskType(id, { active })
   }
 
   return (

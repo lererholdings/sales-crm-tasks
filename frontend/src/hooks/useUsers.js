@@ -24,5 +24,17 @@ export function useUsers() {
     refresh()
   }, [refresh])
 
-  return { users, loading, error, refresh }
+  // Update local state in place rather than refetching the whole list —
+  // see useTaskTypes.js / design.md section 12, "UI mutations update in
+  // place," for why a refetch-driven re-render reads as a full-page flash.
+  const updateUserRole = useCallback(
+    async (id, role) => {
+      const updated = await apiClient.patch(`/users/${id}`, { role })
+      setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)))
+      return updated
+    },
+    [apiClient],
+  )
+
+  return { users, loading, error, refresh, updateUserRole }
 }

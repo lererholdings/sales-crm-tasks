@@ -13,6 +13,8 @@ const ENTRY = {
   id: 'log1',
   entity_type: 'task',
   entity_id: 'task1abcdef',
+  entity_label: 'RFP response',
+  entity_link: null,
   user: { id: 'u2', display_name: 'Sara' },
   action: 'updated',
   changed_fields: { status: { from: 'backlog', to: 'in_progress' } },
@@ -54,16 +56,19 @@ describe('AuditLogPanel', () => {
 
     await waitFor(() => expect(screen.getByText('Sara')).toBeTruthy())
     expect(screen.getByText('updated')).toBeTruthy()
-    expect(screen.getByText(/task1abc/)).toBeTruthy()
+    expect(screen.getByText('RFP response')).toBeTruthy()
     expect(screen.getByText(/status/)).toBeTruthy()
     expect(screen.getByText(/backlog/)).toBeTruthy()
     expect(screen.getByText(/in_progress/)).toBeTruthy()
     expect(screen.getByText('1 entry')).toBeTruthy()
   })
 
-  it('links to the task when the entry has a task_id', async () => {
+  it('links the entity label to its target when entity_link is present', async () => {
     mockFetchByUrl({
-      '/api/audit-log': { entries: [{ ...ENTRY, task_id: 'task1abcdef' }], total: 1 },
+      '/api/audit-log': {
+        entries: [{ ...ENTRY, entity_link: { type: 'task', id: 'task1abcdef' } }],
+        total: 1,
+      },
       '/api/users': [],
     })
 
@@ -73,11 +78,11 @@ describe('AuditLogPanel', () => {
       </MemoryRouter>,
     )
 
-    await waitFor(() => expect(screen.getByText('View task')).toBeTruthy())
-    expect(screen.getByText('View task').closest('a').getAttribute('href')).toBe('/tasks?taskId=task1abcdef')
+    await waitFor(() => expect(screen.getByText('RFP response')).toBeTruthy())
+    expect(screen.getByText('RFP response').closest('a').getAttribute('href')).toBe('/tasks?taskId=task1abcdef')
   })
 
-  it('does not show a task link when the entry has no task_id', async () => {
+  it('renders the entity label as plain text (no link) when entity_link is null', async () => {
     mockFetchByUrl({ '/api/audit-log': { entries: [ENTRY], total: 1 }, '/api/users': [] })
 
     render(
@@ -86,8 +91,8 @@ describe('AuditLogPanel', () => {
       </MemoryRouter>,
     )
 
-    await waitFor(() => expect(screen.getByText('Sara')).toBeTruthy())
-    expect(screen.queryByText('View task')).toBeFalsy()
+    await waitFor(() => expect(screen.getByText('RFP response')).toBeTruthy())
+    expect(screen.getByText('RFP response').closest('a')).toBeFalsy()
   })
 
   it('shows the empty state when no entries match', async () => {
