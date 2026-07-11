@@ -76,6 +76,7 @@ Living index, grouped by target milestone — **check this section at the start 
 - [#12](https://github.com/lererholdings/sales-crm-tasks/issues/12) — Post CI test summary as a PR comment, not just the Actions run page
 - [#14](https://github.com/lererholdings/sales-crm-tasks/issues/14) — Model partner/distributor as entities with account-level defaults + sync-confirmation UX (open architectural question, see design.md section 12)
 - [#15](https://github.com/lererholdings/sales-crm-tasks/issues/15) — Suggest restoring a similar archived account on new-account create (issue #5 part 2 — has its own open fuzzy-match design question)
+- [#20](https://github.com/lererholdings/sales-crm-tasks/issues/20) — Task note lifecycle events (add/remove, not edits) should also write a task-level audit_log summary entry, extending the existing `notes_deleted` cascade-summary pattern from delete to create. Found via Milestone 8 live testing — filtering the admin Audit Log to `entity_type=task` currently excludes note activity entirely.
 
 **Recently closed**
 - [#7](https://github.com/lererholdings/sales-crm-tasks/issues/7) — Accounts list sortable columns + per-column filtering. Shipped in PR #18: `GET /api/accounts` supports `country` filtering (ILIKE) and `sort_by`/`sort_dir` (name, country, acv, updated_at); archived accounts always sort last regardless of the chosen column.
