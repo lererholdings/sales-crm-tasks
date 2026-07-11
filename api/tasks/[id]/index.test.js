@@ -211,6 +211,24 @@ describe('PATCH /api/tasks/:id', () => {
     expect(auditCall[1][3]).toBe('updated')
     expect(JSON.parse(auditCall[1][4])).toEqual({ status: { from: 'backlog', to: 'in_progress' } })
   })
+
+  it('tags the audit entry with the task\'s own id and account_id', async () => {
+    queryMock.mockImplementation(
+      mockQueryImpl({
+        auditBefore: fullTaskRow({ status: 'backlog', account_id: 'acc1' }),
+        auditAfter: fullTaskRow({ status: 'in_progress', account_id: 'acc1' }),
+        fullRow: fullTaskRow({ status: 'in_progress', account_id: 'acc1' }),
+      }),
+    )
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { status: 'in_progress' } }), res)
+
+    expect(res.statusCode).toBe(200)
+    const auditCall = queryMock.mock.calls.find(([sql]) => sql.includes('INSERT INTO audit_log'))
+    expect(auditCall[1][5]).toBe('task1') // task_id
+    expect(auditCall[1][6]).toBe('acc1') // account_id
+  })
 })
 
 describe('DELETE /api/tasks/:id', () => {
@@ -249,6 +267,9 @@ describe('DELETE /api/tasks/:id', () => {
     expect(actions).toEqual(['deleted', 'deleted'])
     const cascadeCall = auditInserts.find(([, params]) => JSON.parse(params[4]).notes_deleted)
     expect(JSON.parse(cascadeCall[1][4])).toEqual({ notes_deleted: { from: 0, to: 2 } })
+    // Both entries (the task's own deleted_at change and the note-cascade
+    // summary) are tagged with the task's own id.
+    expect(auditInserts.every(([, params]) => params[5] === 'task1')).toBe(true)
   })
 
   it('writes only one audit entry when there were no notes to cascade', async () => {

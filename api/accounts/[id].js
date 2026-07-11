@@ -66,7 +66,7 @@ export default withAuth(async (req, res, user) => {
     )
     const updated = rows[0]
 
-    await logFieldChanges('account', id, user.id, 'updated', changes)
+    await logFieldChanges('account', id, user.id, 'updated', changes, { accountId: id })
 
     return res
       .status(200)
@@ -102,7 +102,14 @@ export default withAuth(async (req, res, user) => {
     )
     const archived = rows[0]
 
-    await logFieldChanges('account', id, user.id, 'deleted', { deleted_at: { from: null, to: archived.deleted_at } })
+    await logFieldChanges(
+      'account',
+      id,
+      user.id,
+      'deleted',
+      { deleted_at: { from: null, to: archived.deleted_at } },
+      { accountId: id },
+    )
 
     return res
       .status(200)

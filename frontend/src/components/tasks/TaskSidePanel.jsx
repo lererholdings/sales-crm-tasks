@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAccounts } from '../../hooks/useAccounts.js'
 import { useCurrentUser } from '../../hooks/useCurrentUser.js'
 import { useTask } from '../../hooks/useTask.js'
+import { useTaskHistory } from '../../hooks/useTaskHistory.js'
 import { useTaskTypes } from '../../hooks/useTaskTypes.js'
 import { useUsers } from '../../hooks/useUsers.js'
 import { PRIORITY_LABELS, STATUS_LABELS, TASK_PRIORITIES, TASK_STATUSES } from '../../lib/constants.js'
@@ -10,12 +11,15 @@ import SearchableSelect from '../ui/SearchableSelect.jsx'
 import SidePanel from '../ui/SidePanel.jsx'
 import StatusPill from '../ui/StatusPill.jsx'
 import NotesTimeline from './NotesTimeline.jsx'
+import TaskHistoryTimeline from './TaskHistoryTimeline.jsx'
 
 const STATUS_OPTIONS = TASK_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }))
 const PRIORITY_OPTIONS = TASK_PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABELS[p] }))
 
 export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, onUpdated, onNotesChanged }) {
   const { task, notes, notesTotal, loading, updateTask, loadMoreNotes, addNote, editNote } = useTask(taskId)
+  const { entries: historyEntries, total: historyTotal, loading: historyLoading, loadMore: loadMoreHistory } =
+    useTaskHistory(taskId)
   const { accounts } = useAccounts()
   const { taskTypes } = useTaskTypes()
   const { users } = useUsers()
@@ -84,7 +88,12 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
   }
 
   const accountOptions = accounts.map((a) => ({ value: a.id, label: a.name, archived: Boolean(a.deleted_at) }))
-  const taskTypeOptions = taskTypes.map((t) => ({ value: t.id, label: `${t.category} · ${t.name}` }))
+  // Deactivated subtypes are excluded from selection, except the task's own
+  // current type (if it was deactivated after being assigned) — otherwise
+  // an existing task's type would silently disappear from its own dropdown.
+  const taskTypeOptions = taskTypes
+    .filter((t) => t.active || t.id === form?.task_type_id)
+    .map((t) => ({ value: t.id, label: `${t.category} · ${t.name}` }))
   const userOptions = users.map((u) => ({ value: u.id, label: u.display_name }))
 
   return (
@@ -252,6 +261,13 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
             onLoadMore={loadMoreNotes}
             onAddNote={handleAddNote}
             onEditNote={handleEditNote}
+          />
+
+          <TaskHistoryTimeline
+            entries={historyEntries}
+            total={historyTotal}
+            loading={historyLoading}
+            onLoadMore={loadMoreHistory}
           />
         </>
       )}

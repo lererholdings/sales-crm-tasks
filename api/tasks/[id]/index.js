@@ -93,17 +93,27 @@ async function handleDelete(req, res, user) {
   // summarising the note cascade — not generalizable to other entities, so
   // it's a direct call rather than something withAudit could produce itself.
   if (notesToDelete.length > 0) {
-    await logFieldChanges('task', id, user.id, 'deleted', {
-      notes_deleted: { from: 0, to: notesToDelete.length },
-    })
+    await logFieldChanges(
+      'task',
+      id,
+      user.id,
+      'deleted',
+      { notes_deleted: { from: 0, to: notesToDelete.length } },
+      { taskId: id },
+    )
   }
 
   res.status(200).json({ deleted: true, notes_deleted: notesToDelete.length })
 }
 
-const auditedUpdate = withAudit({ table: 'tasks', entityType: 'task', fields: TASK_AUDIT_FIELDS }, handleUpdate)
+const deriveTaskContext = (row) => ({ taskId: row.id, accountId: row.account_id })
+
+const auditedUpdate = withAudit(
+  { table: 'tasks', entityType: 'task', fields: TASK_AUDIT_FIELDS, deriveContext: deriveTaskContext },
+  handleUpdate,
+)
 const auditedDelete = withAudit(
-  { table: 'tasks', entityType: 'task', fields: ['deleted_at', 'deleted_by'] },
+  { table: 'tasks', entityType: 'task', fields: ['deleted_at', 'deleted_by'], deriveContext: deriveTaskContext },
   handleDelete,
 )
 

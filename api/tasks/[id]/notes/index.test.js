@@ -16,6 +16,7 @@ const CALLER_ROW = { id: 'caller-id', role: 'member', display_name: 'Caller', em
 function noteRow(overrides = {}) {
   return {
     id: 'note1',
+    task_id: 'task1',
     content: 'Sent draft',
     created_at: 't1',
     edited_at: null,
@@ -217,5 +218,6 @@ describe('POST /api/tasks/:id/notes', () => {
     expect(auditCall[1][0]).toBe('task_note')
     expect(auditCall[1][3]).toBe('created')
     expect(JSON.parse(auditCall[1][4])).toEqual({ content: { from: null, to: 'Customer confirmed receipt' } })
+    expect(auditCall[1][5]).toBe('task1') // task_id, from the note's own task_id column
   })
 })

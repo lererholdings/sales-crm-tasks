@@ -38,7 +38,12 @@ export default function NewTaskModal({ tasks, onClose, onCreate }) {
   const [error, setError] = useState(null)
 
   const accountOptions = accounts.map((a) => ({ value: a.id, label: a.name, archived: Boolean(a.deleted_at) }))
-  const taskTypeOptions = taskTypes.map((t) => ({ value: t.id, label: `${t.category} · ${t.name}` }))
+  // Deactivated subtypes shouldn't be offered for a brand-new task — see
+  // TaskSidePanel.jsx for the editing case, where an already-assigned
+  // inactive type still needs to stay selectable.
+  const taskTypeOptions = taskTypes
+    .filter((t) => t.active)
+    .map((t) => ({ value: t.id, label: `${t.category} · ${t.name}` }))
   const userOptions = users.map((u) => ({ value: u.id, label: u.display_name }))
   const priorityOptions = TASK_PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABELS[p] }))
   // "Done" isn't a sensible starting status for a brand-new task — it's

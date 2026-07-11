@@ -61,7 +61,12 @@ async function handleCreate(req, res, user) {
 }
 
 const auditedCreate = withAudit(
-  { table: 'task_notes', entityType: 'task_note', fields: NOTE_AUDIT_FIELDS },
+  {
+    table: 'task_notes',
+    entityType: 'task_note',
+    fields: NOTE_AUDIT_FIELDS,
+    deriveContext: (row) => ({ taskId: row.task_id }),
+  },
   handleCreate,
 )
 

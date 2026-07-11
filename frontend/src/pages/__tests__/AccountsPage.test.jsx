@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const getTokenMock = vi.fn()
@@ -28,6 +29,14 @@ function accountsCallCount() {
   return global.fetch.mock.calls.filter(([url]) => url.startsWith('/api/accounts') && !url.includes('search=')).length
 }
 
+function renderAccountsPage(initialEntries = ['/accounts']) {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <AccountsPage />
+    </MemoryRouter>,
+  )
+}
+
 describe('AccountsPage', () => {
   beforeEach(() => {
     getTokenMock.mockReset()
@@ -49,7 +58,7 @@ describe('AccountsPage', () => {
       ],
     })
 
-    render(<AccountsPage />)
+    renderAccountsPage()
 
     await waitFor(() => expect(screen.getByText('Acme Corp')).toBeTruthy())
     expect(global.fetch).toHaveBeenCalledWith('/api/accounts', expect.anything())
@@ -58,7 +67,7 @@ describe('AccountsPage', () => {
   it('re-fetches with a search query param when the search input changes', async () => {
     mockFetchByUrl({ '/api/accounts': [] })
 
-    render(<AccountsPage />)
+    renderAccountsPage()
     await waitFor(() => expect(accountsCallCount()).toBeGreaterThan(0))
 
     fireEvent.change(screen.getByPlaceholderText('Search accounts…'), { target: { value: 'Acme' } })
@@ -84,7 +93,7 @@ describe('AccountsPage', () => {
       ],
     })
 
-    render(<AccountsPage />)
+    renderAccountsPage()
     await waitFor(() => expect(screen.getByText('Acme Corp')).toBeTruthy())
 
     fireEvent.click(screen.getByRole('columnheader', { name: 'Country' }))
@@ -98,11 +107,35 @@ describe('AccountsPage', () => {
   it('opens the new account modal', async () => {
     mockFetchByUrl({ '/api/accounts': [] })
 
-    render(<AccountsPage />)
+    renderAccountsPage()
     await waitFor(() => expect(accountsCallCount()).toBeGreaterThan(0))
 
     fireEvent.click(screen.getByText('New account'))
 
     expect(screen.getByText('Create')).toBeTruthy()
+  })
+
+  it('opens straight to an account from a ?accountId= deep link, and clears the param on close', async () => {
+    mockFetchByUrl({
+      '/api/accounts/a1': {
+        id: 'a1',
+        name: 'Acme Corp',
+        country: 'Australia',
+        sfdc_account_url: null,
+        acv: null,
+        updated_at: '2026-06-15T10:00:00Z',
+        deleted_at: null,
+      },
+      '/api/accounts': [],
+      '/api/users?me=true': { id: 'u1', display_name: 'Sara', email: 's@x.com', role: 'member' },
+    })
+
+    renderAccountsPage(['/accounts?accountId=a1'])
+
+    await waitFor(() => expect(screen.getByLabelText('Close account panel')).toBeTruthy())
+    expect(screen.getByDisplayValue('Acme Corp')).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText('Close account panel'))
+    await waitFor(() => expect(screen.queryByLabelText('Close account panel')).toBeFalsy())
   })
 })

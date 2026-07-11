@@ -63,6 +63,8 @@ jobs:
     if: github.ref != 'refs/heads/main'
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v6
         with:
@@ -77,15 +79,35 @@ jobs:
       # 63-char DNS label limit (hit for the first time by
       # milestone-6-filters-sorting-columns), so string-guessing the URL is
       # not reliable for longer branch names.
+      #
+      # Walks backward through this branch's commit history (not just the
+      # exact head SHA) looking for a commit Vercel actually built a
+      # deployment for — found via a real PR whose last commit only touched
+      # docs/operations.md: Vercel's Ignored Build Step correctly skips
+      # building a docs-only commit, so no deployment record exists for
+      # that exact SHA, and a SHA-only lookup polls for the full 5 minutes
+      # and fails every time. The branch's live alias still points at the
+      # last commit Vercel *did* build, so that's what this should resolve
+      # to. (GitHub's deployment records have no queryable branch field —
+      # `ref` is always just the SHA — so this can't be done as a single
+      # API filter.) fetch-depth: 0 above so the walk has real history to
+      # search, not just the single checked-out commit.
       - name: Wait for the preview deployment to be live
         id: preview
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          echo "Looking up the Preview deployment for $SHA"
+          echo "Looking up the Preview deployment for $SHA (or the most recent earlier commit Vercel actually built)"
           for i in $(seq 1 30); do
-            DEPLOYMENT_ID=$(gh api "repos/${{ github.repository }}/deployments?sha=$SHA&environment=Preview" --jq '.[0].id // empty')
+            DEPLOYMENT_ID=""
+            for CANDIDATE_SHA in $(git log --format=%H "$SHA" -n 20); do
+              ID=$(gh api "repos/${{ github.repository }}/deployments?sha=$CANDIDATE_SHA&environment=Preview" --jq '.[0].id // empty')
+              if [ -n "$ID" ]; then
+                DEPLOYMENT_ID="$ID"
+                break
+              fi
+            done
             if [ -n "$DEPLOYMENT_ID" ]; then
               URL=$(gh api "repos/${{ github.repository }}/deployments/$DEPLOYMENT_ID/statuses" --jq '[.[] | select(.state == "success")][0].environment_url // empty')
               if [ -n "$URL" ]; then

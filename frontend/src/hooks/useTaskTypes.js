@@ -24,5 +24,28 @@ export function useTaskTypes() {
     refresh()
   }, [refresh])
 
-  return { taskTypes, loading, error, refresh }
+  // Update local state in place rather than refetching the whole list — a
+  // refetch flips `loading` back to true, which (per the conditional
+  // rendering in TaskTypesPanel) unmounts and remounts the entire list for
+  // a moment, reading as a full-page flash for what's really a one-row
+  // change. See design.md section 12, "UI mutations update in place."
+  const createTaskType = useCallback(
+    async (payload) => {
+      const created = await apiClient.post('/task-types', payload)
+      setTaskTypes((prev) => [...prev, created])
+      return created
+    },
+    [apiClient],
+  )
+
+  const updateTaskType = useCallback(
+    async (id, patch) => {
+      const updated = await apiClient.patch(`/task-types?id=${id}`, patch)
+      setTaskTypes((prev) => prev.map((t) => (t.id === id ? updated : t)))
+      return updated
+    },
+    [apiClient],
+  )
+
+  return { taskTypes, loading, error, refresh, createTaskType, updateTaskType }
 }

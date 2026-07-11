@@ -85,7 +85,12 @@ export default function AccountSidePanel({ accountId, onClose, onUpdated }) {
           {account?.name ?? 'Account'}
           {account?.deleted_at && <span className="ml-1.5 text-[12px] font-normal text-text-muted">(archived)</span>}
         </h2>
-        <button type="button" onClick={onClose} className="text-text-secondary hover:text-text-primary">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close account panel"
+          className="text-text-secondary hover:text-text-primary"
+        >
           <i className="ti ti-x" />
         </button>
       </div>
