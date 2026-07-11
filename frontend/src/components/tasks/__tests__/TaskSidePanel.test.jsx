@@ -158,4 +158,24 @@ describe('TaskSidePanel', () => {
 
     expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ status: 'done' }))
   })
+
+  it('keeps the task\'s own type selectable even after it is deactivated, but excludes other inactive types', async () => {
+    mockFetchByUrl({
+      '/api/tasks/t1?notes_limit': TASK_DETAIL,
+      '/api/users?me=true': CURRENT_USER,
+      '/api/task-types': [
+        { id: 'tt1', category: 'pre-sale', name: 'RFP', active: false }, // the task's own current type
+        { id: 'tt2', category: 'pre-sale', name: 'Demo', active: true },
+        { id: 'tt3', category: 'pre-sale', name: 'Retired', active: false },
+      ],
+    })
+
+    render(<TaskSidePanel taskId="t1" onClose={vi.fn()} onUpdated={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('First note')).toBeTruthy())
+
+    fireEvent.click(screen.getByText('pre-sale · RFP'))
+
+    expect(screen.getByText('pre-sale · Demo')).toBeTruthy()
+    expect(screen.queryByText('pre-sale · Retired')).toBeFalsy()
+  })
 })

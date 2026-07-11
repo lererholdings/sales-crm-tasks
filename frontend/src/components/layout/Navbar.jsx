@@ -1,18 +1,18 @@
 import { NavLink } from 'react-router-dom'
 import { UserButton } from '@clerk/clerk-react'
+import { useCurrentUser } from '../../hooks/useCurrentUser.js'
 import { useTheme } from '../../hooks/useTheme.js'
 
-// Admin is unconditionally visible for now — role-based show/hide is
-// Milestone 8's job, once GET /api/users gives us the real role from
-// Supabase (role is never stored in Clerk, see design.md section 3).
-const links = [
+const BASE_LINKS = [
   { to: '/tasks', label: 'Tasks', icon: 'ti-layout-list' },
   { to: '/accounts', label: 'Accounts', icon: 'ti-building' },
-  { to: '/admin', label: 'Admin', icon: 'ti-settings' },
 ]
+const ADMIN_LINK = { to: '/admin', label: 'Admin', icon: 'ti-settings' }
 
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme()
+  const { user: currentUser } = useCurrentUser()
+  const links = currentUser?.role === 'admin' ? [...BASE_LINKS, ADMIN_LINK] : BASE_LINKS
 
   return (
     <nav className="flex h-13 items-center gap-4 bg-navbar px-5 border-b border-navbar-border">

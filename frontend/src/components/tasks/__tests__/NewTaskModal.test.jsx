@@ -30,4 +30,25 @@ describe('NewTaskModal', () => {
     expect(screen.queryByText('Done')).toBeFalsy()
     expect(screen.getByText('Waiting')).toBeTruthy()
   })
+
+  it('excludes deactivated task types from the type dropdown', async () => {
+    global.fetch = vi.fn((url) => {
+      if (url.startsWith('/api/task-types')) {
+        return Promise.resolve(
+          jsonResponse([
+            { id: 't1', category: 'pre-sale', name: 'Demo', active: true },
+            { id: 't2', category: 'pre-sale', name: 'Retired', active: false },
+          ]),
+        )
+      }
+      return Promise.resolve(jsonResponse([]))
+    })
+
+    render(<NewTaskModal tasks={[]} onClose={vi.fn()} onCreate={vi.fn()} />)
+
+    fireEvent.click(await screen.findByText('Select type…'))
+
+    expect(screen.getByText('pre-sale · Demo')).toBeTruthy()
+    expect(screen.queryByText('pre-sale · Retired')).toBeFalsy()
+  })
 })

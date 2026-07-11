@@ -1,6 +1,11 @@
 // Mirrors lib/tasks.js's VALID_STATUSES / VALID_PRIORITIES on the backend.
 export const TASK_STATUSES = ['backlog', 'in_progress', 'waiting', 'done']
 export const TASK_PRIORITIES = ['critical', 'high', 'medium', 'low']
+// Mirrors api/task-types/index.js's VALID_CATEGORIES (task_category enum).
+export const TASK_CATEGORIES = ['pre-sale', 'post-sale', 'account']
+// Mirrors api/audit-log/index.js's VALID_ENTITY_TYPES / VALID_ACTIONS.
+export const AUDIT_ENTITY_TYPES = ['task', 'account', 'task_note', 'task_type', 'user']
+export const AUDIT_ACTIONS = ['created', 'updated', 'deleted', 'viewed']
 
 export const STATUS_LABELS = {
   backlog: 'Backlog',

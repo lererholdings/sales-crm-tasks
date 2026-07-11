@@ -84,7 +84,12 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
   }
 
   const accountOptions = accounts.map((a) => ({ value: a.id, label: a.name, archived: Boolean(a.deleted_at) }))
-  const taskTypeOptions = taskTypes.map((t) => ({ value: t.id, label: `${t.category} · ${t.name}` }))
+  // Deactivated subtypes are excluded from selection, except the task's own
+  // current type (if it was deactivated after being assigned) — otherwise
+  // an existing task's type would silently disappear from its own dropdown.
+  const taskTypeOptions = taskTypes
+    .filter((t) => t.active || t.id === form?.task_type_id)
+    .map((t) => ({ value: t.id, label: `${t.category} · ${t.name}` }))
   const userOptions = users.map((u) => ({ value: u.id, label: u.display_name }))
 
   return (

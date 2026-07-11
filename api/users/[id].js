@@ -1,7 +1,8 @@
 import { withAuth } from '../../lib/auth.js'
+import { withAudit } from '../../lib/audit.js'
 import { query } from '../../lib/db.js'
 
-export default withAuth(async (req, res, user) => {
+async function handleUpdate(req, res, user) {
   if (req.method !== 'PATCH') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -22,4 +23,6 @@ export default withAuth(async (req, res, user) => {
     return res.status(404).json({ error: 'User not found' })
   }
   res.status(200).json(rows[0])
-})
+}
+
+export default withAuth(withAudit({ table: 'users', entityType: 'user', fields: ['role'] }, handleUpdate))
