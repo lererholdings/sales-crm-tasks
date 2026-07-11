@@ -27,36 +27,42 @@ export default withAuth(async (req, res, user) => {
 
   const q = req.query
   const conditions = []
-  const params = []
+  const filterParams = []
 
   if (q.user_id) {
-    params.push(q.user_id)
-    conditions.push(`a.user_id = $${params.length}`)
+    filterParams.push(q.user_id)
+    conditions.push(`a.user_id = $${filterParams.length}`)
   }
   if (q.entity_type) {
     if (!VALID_ENTITY_TYPES.includes(q.entity_type)) return res.status(400).json({ error: 'Invalid entity_type' })
-    params.push(q.entity_type)
-    conditions.push(`a.entity_type = $${params.length}`)
+    filterParams.push(q.entity_type)
+    conditions.push(`a.entity_type = $${filterParams.length}`)
   }
   if (q.action) {
     if (!VALID_ACTIONS.includes(q.action)) return res.status(400).json({ error: 'Invalid action' })
-    params.push(q.action)
-    conditions.push(`a.action = $${params.length}`)
+    filterParams.push(q.action)
+    conditions.push(`a.action = $${filterParams.length}`)
   }
   if (q.from) {
-    params.push(q.from)
-    conditions.push(`a.timestamp >= $${params.length}`)
+    filterParams.push(q.from)
+    conditions.push(`a.timestamp >= $${filterParams.length}`)
   }
   if (q.to) {
-    params.push(q.to)
-    conditions.push(`a.timestamp <= $${params.length}`)
+    filterParams.push(q.to)
+    conditions.push(`a.timestamp <= $${filterParams.length}`)
   }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  // Same filters, no LEFT JOIN needed (nothing filters on the joined user's
+  // own columns) — powers the pager's jump-to-last / page dropdown.
+  const { rows: countRows } = await query(`SELECT COUNT(1) AS total FROM audit_log a ${whereClause}`, filterParams)
+  const total = Number(countRows[0].total)
 
   const limit = Math.min(Number.parseInt(q.limit, 10) || 100, MAX_LIMIT)
   const offset = Number.parseInt(q.offset, 10) || 0
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+  const listParams = [...filterParams, limit, offset]
 
-  params.push(limit, offset)
   const { rows } = await query(
     `SELECT a.id, a.entity_type, a.entity_id, a.action, a.changed_fields, a.timestamp,
             u.id AS user_id, u.display_name AS user_display_name
@@ -64,8 +70,8 @@ export default withAuth(async (req, res, user) => {
      LEFT JOIN users u ON u.id = a.user_id
      ${whereClause}
      ORDER BY a.timestamp DESC
-     LIMIT $${params.length - 1} OFFSET $${params.length}`,
-    params,
+     LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+    listParams,
   )
-  res.status(200).json(rows.map(toEntry))
+  res.status(200).json({ entries: rows.map(toEntry), total })
 })

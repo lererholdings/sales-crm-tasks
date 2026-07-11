@@ -12,7 +12,20 @@ describe('useAuditLog', () => {
   beforeEach(() => {
     getTokenMock.mockReset()
     getTokenMock.mockResolvedValue('token')
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] })
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ entries: [], total: 0 }) })
+  })
+
+  it('exposes entries and total from the { entries, total } response shape', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ entries: [{ id: 'log1' }], total: 137 }),
+    })
+
+    const { result } = renderHook(() => useAuditLog())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.entries).toEqual([{ id: 'log1' }])
+    expect(result.current.total).toBe(137)
   })
 
   it('fetches the plain endpoint when no filters are given', async () => {

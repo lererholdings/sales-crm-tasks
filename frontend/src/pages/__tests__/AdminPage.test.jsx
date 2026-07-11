@@ -82,17 +82,20 @@ describe('AdminPage', () => {
   it('switches to the Audit Log panel when its tab is clicked', async () => {
     mockFetchByUrl({
       '/api/users?me=true': { id: 'u1', display_name: 'Admin', email: 'a@x.com', role: 'admin' },
-      '/api/audit-log': [
-        {
-          id: 'log1',
-          entity_type: 'task',
-          entity_id: 'task1',
-          user: { id: 'u2', display_name: 'Sara' },
-          action: 'updated',
-          changed_fields: { status: { from: 'backlog', to: 'in_progress' } },
-          timestamp: '2026-06-15T10:00:00Z',
-        },
-      ],
+      '/api/audit-log': {
+        entries: [
+          {
+            id: 'log1',
+            entity_type: 'task',
+            entity_id: 'task1',
+            user: { id: 'u2', display_name: 'Sara' },
+            action: 'updated',
+            changed_fields: { status: { from: 'backlog', to: 'in_progress' } },
+            timestamp: '2026-06-15T10:00:00Z',
+          },
+        ],
+        total: 1,
+      },
     })
 
     renderAtAdmin()

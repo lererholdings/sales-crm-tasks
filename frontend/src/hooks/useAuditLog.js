@@ -10,6 +10,7 @@ const EMPTY_FILTERS = {}
 export function useAuditLog(filters = EMPTY_FILTERS) {
   const apiClient = useApiClient()
   const [entries, setEntries] = useState([])
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -23,7 +24,8 @@ export function useAuditLog(filters = EMPTY_FILTERS) {
       }
       const qs = params.toString()
       const data = await apiClient.get(`/audit-log${qs ? `?${qs}` : ''}`)
-      setEntries(data)
+      setEntries(data.entries)
+      setTotal(data.total)
     } catch (err) {
       setError(err)
     } finally {
@@ -35,5 +37,5 @@ export function useAuditLog(filters = EMPTY_FILTERS) {
     refresh()
   }, [refresh])
 
-  return { entries, loading, error, refresh }
+  return { entries, total, loading, error, refresh }
 }

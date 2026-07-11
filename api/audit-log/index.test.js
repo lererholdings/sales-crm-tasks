@@ -44,9 +44,11 @@ function authedReq(overrides = {}) {
 }
 
 function mockQueryImpl(overrides = {}) {
+  const entries = overrides.entries ?? [ENTRY_ROW]
   return (sql) => {
     if (sql.includes('FROM users WHERE clerk_user_id')) return { rows: [overrides.caller ?? ADMIN_ROW] }
-    if (sql.includes('FROM audit_log a')) return { rows: overrides.entries ?? [ENTRY_ROW] }
+    if (sql.includes('COUNT(1)')) return { rows: [{ total: String(overrides.total ?? entries.length) }] }
+    if (sql.includes('FROM audit_log a')) return { rows: entries }
     throw new Error(`Unmocked query: ${sql}`)
   }
 }
@@ -73,7 +75,7 @@ describe('GET /api/audit-log', () => {
     await handler(authedReq(), res)
 
     expect(res.statusCode).toBe(200)
-    expect(res.body[0]).toEqual({
+    expect(res.body.entries[0]).toEqual({
       id: 'log1',
       entity_type: 'task',
       entity_id: 'task1',
@@ -82,7 +84,8 @@ describe('GET /api/audit-log', () => {
       changed_fields: { status: { from: 'backlog', to: 'in_progress' } },
       timestamp: '2026-06-15T10:00:00Z',
     })
-    const [sql] = queryMock.mock.calls[1]
+    expect(res.body.total).toBe(1)
+    const [sql] = queryMock.mock.calls[2]
     expect(sql).toContain('ORDER BY a.timestamp DESC')
   })
 
@@ -92,7 +95,21 @@ describe('GET /api/audit-log', () => {
     const res = mockRes()
     await handler(authedReq(), res)
 
-    expect(res.body[0].user).toBeNull()
+    expect(res.body.entries[0].user).toBeNull()
+  })
+
+  it('includes a COUNT(1) total reflecting the same filters, without the user join', async () => {
+    queryMock.mockImplementation(mockQueryImpl({ total: 42 }))
+
+    const res = mockRes()
+    await handler(authedReq({ query: { entity_type: 'task' } }), res)
+
+    expect(res.body.total).toBe(42)
+    const [countSql, countParams] = queryMock.mock.calls[1]
+    expect(countSql).toContain('SELECT COUNT(1) AS total FROM audit_log a')
+    expect(countSql).not.toContain('LEFT JOIN')
+    expect(countSql).toContain('a.entity_type = $1')
+    expect(countParams).toEqual(['task'])
   })
 
   it('filters by user_id, entity_type, action, and date range together', async () => {
@@ -107,7 +124,7 @@ describe('GET /api/audit-log', () => {
     )
 
     expect(res.statusCode).toBe(200)
-    const [sql, params] = queryMock.mock.calls[1]
+    const [sql, params] = queryMock.mock.calls[2]
     expect(sql).toContain('a.user_id = $1')
     expect(sql).toContain('a.entity_type = $2')
     expect(sql).toContain('a.action = $3')
@@ -141,7 +158,7 @@ describe('GET /api/audit-log', () => {
     await handler(authedReq(), res)
 
     expect(res.statusCode).toBe(200)
-    const [, params] = queryMock.mock.calls[1]
+    const [, params] = queryMock.mock.calls[2]
     expect(params).toEqual([100, 0])
   })
 
@@ -152,7 +169,7 @@ describe('GET /api/audit-log', () => {
     await handler(authedReq({ query: { limit: '9999', offset: '50' } }), res)
 
     expect(res.statusCode).toBe(200)
-    const [, params] = queryMock.mock.calls[1]
+    const [, params] = queryMock.mock.calls[2]
     expect(params[0]).toBe(500) // capped at MAX_LIMIT
     expect(params[1]).toBe(50)
   })

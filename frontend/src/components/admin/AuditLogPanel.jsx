@@ -4,7 +4,7 @@ import AuditFilterBar from './AuditFilterBar.jsx'
 import AuditPagination from './AuditPagination.jsx'
 import AuditTable from './AuditTable.jsx'
 
-const LIMIT = 50
+const LIMIT = 100
 
 export default function AuditLogPanel() {
   const [filters, setFilters] = useState({ offset: 0 })
@@ -12,7 +12,7 @@ export default function AuditLogPanel() {
   // actually changes — see useTasks.js for why an inline object literal
   // here would cause a refetch loop instead.
   const queryFilters = useMemo(() => ({ ...filters, limit: LIMIT }), [filters])
-  const { entries, loading, error } = useAuditLog(queryFilters)
+  const { entries, total, loading, error } = useAuditLog(queryFilters)
 
   return (
     <div>
@@ -25,7 +25,7 @@ export default function AuditLogPanel() {
           <AuditPagination
             offset={filters.offset}
             limit={LIMIT}
-            resultCount={entries.length}
+            total={total}
             onPageChange={(offset) => setFilters((prev) => ({ ...prev, offset }))}
           />
         </>
