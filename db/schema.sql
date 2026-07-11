@@ -219,7 +219,9 @@ CREATE TABLE user_preferences (
 -- ============================================================
 -- AUDIT LOG
 -- Immutable record of all changes and view events.
--- Visible to admin role only (enforced at API layer).
+-- Full unscoped access is admin role only (enforced at API layer);
+-- a task-scoped query (task_id set) is open to any authenticated user,
+-- so a task's own "view history" doesn't require admin.
 -- ============================================================
 
 CREATE TABLE audit_log (
@@ -229,12 +231,20 @@ CREATE TABLE audit_log (
   user_id        UUID          REFERENCES users(id) ON DELETE SET NULL,
   action         audit_action  NOT NULL,
   changed_fields JSONB,                            -- { field: { from: x, to: y } } — null for 'viewed'
-  timestamp      TIMESTAMPTZ   NOT NULL DEFAULT now()
+  timestamp      TIMESTAMPTZ   NOT NULL DEFAULT now(),
+
+  -- Which task/account this change happened on, distinct from
+  -- entity_type/entity_id — a task_note entry's entity_id is the note's
+  -- own id, not the task it belongs to. Null for entity types that aren't
+  -- task/account-scoped (task_type, user).
+  task_id        UUID          REFERENCES tasks(id) ON DELETE SET NULL,
+  account_id     UUID          REFERENCES accounts(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_audit_log_entity    ON audit_log(entity_type, entity_id);
 CREATE INDEX idx_audit_log_user_id   ON audit_log(user_id);
 CREATE INDEX idx_audit_log_timestamp ON audit_log(timestamp DESC);
+CREATE INDEX idx_audit_log_task_id   ON audit_log(task_id);
 
 -- ============================================================
 -- AUTO-UPDATE updated_at

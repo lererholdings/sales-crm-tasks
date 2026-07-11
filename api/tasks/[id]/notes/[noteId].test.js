@@ -16,6 +16,7 @@ const CALLER_ROW = { id: 'caller-id', role: 'member', display_name: 'Caller', em
 function noteRow(overrides = {}) {
   return {
     id: 'note1',
+    task_id: 'task1',
     content: 'Sent draft',
     created_at: 't1',
     edited_at: null,
@@ -153,6 +154,7 @@ describe('PATCH /api/tasks/:id/notes/:noteId', () => {
     expect(auditCall[1][0]).toBe('task_note')
     expect(auditCall[1][3]).toBe('updated')
     expect(JSON.parse(auditCall[1][4])).toEqual({ content: { from: 'Sent draft', to: 'Sent final draft' } })
+    expect(auditCall[1][5]).toBe('task1') // task_id, from the note's own task_id column
   })
 
   it('does not log an audit entry when the edit is rejected', async () => {

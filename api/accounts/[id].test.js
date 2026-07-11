@@ -120,6 +120,7 @@ describe('PATCH /api/accounts/:id', () => {
     expect(auditCall[0]).toContain('INSERT INTO audit_log')
     expect(auditCall[1][3]).toBe('updated')
     expect(JSON.parse(auditCall[1][4])).toEqual({ acv: { from: 50000, to: 120000 } })
+    expect(auditCall[1][6]).toBe('a1') // account_id
   })
 
   it('does not log a change when the new value equals the current value', async () => {
@@ -211,5 +212,6 @@ describe('DELETE /api/accounts/:id (archive)', () => {
     expect(auditCall[0]).toContain('INSERT INTO audit_log')
     expect(auditCall[1][3]).toBe('deleted')
     expect(JSON.parse(auditCall[1][4])).toEqual({ deleted_at: { from: null, to: 'now' } })
+    expect(auditCall[1][6]).toBe('a1') // account_id
   })
 })

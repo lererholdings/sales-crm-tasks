@@ -14,6 +14,8 @@ function toEntry(row) {
     action: row.action,
     changed_fields: row.changed_fields,
     timestamp: row.timestamp,
+    task_id: row.task_id,
+    account_id: row.account_id,
   }
 }
 
@@ -21,14 +23,23 @@ export default withAuth(async (req, res, user) => {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
-  if (user.role !== 'admin') {
+
+  const q = req.query
+  // Full unscoped access (browsing/filtering everything) is admin-only. A
+  // task-scoped query is open to any authenticated user — that's just "this
+  // task's own history," which the task's own page already exposes to
+  // whoever can see the task, not a broader audit surface.
+  if (user.role !== 'admin' && !q.task_id) {
     return res.status(403).json({ error: 'Forbidden' })
   }
 
-  const q = req.query
   const conditions = []
   const filterParams = []
 
+  if (q.task_id) {
+    filterParams.push(q.task_id)
+    conditions.push(`a.task_id = $${filterParams.length}`)
+  }
   if (q.user_id) {
     filterParams.push(q.user_id)
     conditions.push(`a.user_id = $${filterParams.length}`)
@@ -64,7 +75,7 @@ export default withAuth(async (req, res, user) => {
   const listParams = [...filterParams, limit, offset]
 
   const { rows } = await query(
-    `SELECT a.id, a.entity_type, a.entity_id, a.action, a.changed_fields, a.timestamp,
+    `SELECT a.id, a.entity_type, a.entity_id, a.action, a.changed_fields, a.timestamp, a.task_id, a.account_id,
             u.id AS user_id, u.display_name AS user_display_name
      FROM audit_log a
      LEFT JOIN users u ON u.id = a.user_id

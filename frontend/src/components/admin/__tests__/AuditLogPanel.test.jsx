@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const getTokenMock = vi.fn()
@@ -16,6 +17,8 @@ const ENTRY = {
   action: 'updated',
   changed_fields: { status: { from: 'backlog', to: 'in_progress' } },
   timestamp: '2026-06-15T10:00:00Z',
+  task_id: null,
+  account_id: null,
 }
 
 function jsonResponse(body) {
@@ -43,7 +46,11 @@ describe('AuditLogPanel', () => {
   it('lists audit entries with formatted changed fields', async () => {
     mockFetchByUrl({ '/api/audit-log': { entries: [ENTRY], total: 1 }, '/api/users': [] })
 
-    render(<AuditLogPanel />)
+    render(
+      <MemoryRouter>
+        <AuditLogPanel />
+      </MemoryRouter>,
+    )
 
     await waitFor(() => expect(screen.getByText('Sara')).toBeTruthy())
     expect(screen.getByText('updated')).toBeTruthy()
@@ -54,10 +61,43 @@ describe('AuditLogPanel', () => {
     expect(screen.getByText('1 entry')).toBeTruthy()
   })
 
+  it('links to the task when the entry has a task_id', async () => {
+    mockFetchByUrl({
+      '/api/audit-log': { entries: [{ ...ENTRY, task_id: 'task1abcdef' }], total: 1 },
+      '/api/users': [],
+    })
+
+    render(
+      <MemoryRouter>
+        <AuditLogPanel />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(screen.getByText('View task')).toBeTruthy())
+    expect(screen.getByText('View task').closest('a').getAttribute('href')).toBe('/tasks?taskId=task1abcdef')
+  })
+
+  it('does not show a task link when the entry has no task_id', async () => {
+    mockFetchByUrl({ '/api/audit-log': { entries: [ENTRY], total: 1 }, '/api/users': [] })
+
+    render(
+      <MemoryRouter>
+        <AuditLogPanel />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(screen.getByText('Sara')).toBeTruthy())
+    expect(screen.queryByText('View task')).toBeFalsy()
+  })
+
   it('shows the empty state when no entries match', async () => {
     mockFetchByUrl({ '/api/audit-log': { entries: [], total: 0 }, '/api/users': [] })
 
-    render(<AuditLogPanel />)
+    render(
+      <MemoryRouter>
+        <AuditLogPanel />
+      </MemoryRouter>,
+    )
 
     await waitFor(() => expect(screen.getByText('No audit events match these filters.')).toBeTruthy())
     expect(screen.getByText('0 entries')).toBeTruthy()
@@ -66,7 +106,11 @@ describe('AuditLogPanel', () => {
   it('refetches with the action filter and resets offset', async () => {
     mockFetchByUrl({ '/api/audit-log': { entries: [ENTRY], total: 1 }, '/api/users': [] })
 
-    render(<AuditLogPanel />)
+    render(
+      <MemoryRouter>
+        <AuditLogPanel />
+      </MemoryRouter>,
+    )
     await waitFor(() => expect(screen.getByText('Sara')).toBeTruthy())
 
     fireEvent.click(screen.getByRole('button', { name: 'Action' }))
@@ -83,7 +127,11 @@ describe('AuditLogPanel', () => {
     const fullPage = Array.from({ length: 100 }, (_, i) => ({ ...ENTRY, id: `log${i}` }))
     mockFetchByUrl({ '/api/audit-log': { entries: fullPage, total: 250 }, '/api/users': [] })
 
-    render(<AuditLogPanel />)
+    render(
+      <MemoryRouter>
+        <AuditLogPanel />
+      </MemoryRouter>,
+    )
     await waitFor(() => expect(screen.getByText('250 entries')).toBeTruthy())
 
     fireEvent.click(screen.getByText(/Next/))
@@ -98,7 +146,11 @@ describe('AuditLogPanel', () => {
     const fullPage = Array.from({ length: 100 }, (_, i) => ({ ...ENTRY, id: `log${i}` }))
     mockFetchByUrl({ '/api/audit-log': { entries: fullPage, total: 250 }, '/api/users': [] })
 
-    render(<AuditLogPanel />)
+    render(
+      <MemoryRouter>
+        <AuditLogPanel />
+      </MemoryRouter>,
+    )
     await waitFor(() => expect(screen.getByText('250 entries')).toBeTruthy())
 
     fireEvent.click(screen.getByLabelText('Jump to last page'))
@@ -114,7 +166,11 @@ describe('AuditLogPanel', () => {
     const fullPage = Array.from({ length: 100 }, (_, i) => ({ ...ENTRY, id: `log${i}` }))
     mockFetchByUrl({ '/api/audit-log': { entries: fullPage, total: 250 }, '/api/users': [] })
 
-    render(<AuditLogPanel />)
+    render(
+      <MemoryRouter>
+        <AuditLogPanel />
+      </MemoryRouter>,
+    )
     await waitFor(() => expect(screen.getByText('250 entries')).toBeTruthy())
 
     fireEvent.click(screen.getByLabelText('Jump to last page'))
@@ -132,7 +188,11 @@ describe('AuditLogPanel', () => {
     const fullPage = Array.from({ length: 100 }, (_, i) => ({ ...ENTRY, id: `log${i}` }))
     mockFetchByUrl({ '/api/audit-log': { entries: fullPage, total: 250 }, '/api/users': [] })
 
-    render(<AuditLogPanel />)
+    render(
+      <MemoryRouter>
+        <AuditLogPanel />
+      </MemoryRouter>,
+    )
     await waitFor(() => expect(screen.getByText('250 entries')).toBeTruthy())
 
     fireEvent.change(screen.getByLabelText('Jump to page'), { target: { value: '2' } })

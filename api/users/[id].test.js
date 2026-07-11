@@ -92,7 +92,15 @@ describe('PATCH /api/users/:id', () => {
 
     const auditCall = queryMock.mock.calls.find(([sql]) => sql.includes('INSERT INTO audit_log'))
     expect(auditCall).toBeDefined()
-    expect(auditCall[1]).toEqual(['user', 'target-id', 'caller-id', 'updated', JSON.stringify({ role: { from: 'member', to: 'admin' } })])
+    expect(auditCall[1]).toEqual([
+      'user',
+      'target-id',
+      'caller-id',
+      'updated',
+      JSON.stringify({ role: { from: 'member', to: 'admin' } }),
+      null,
+      null,
+    ])
   })
 
   it('rejects an invalid role value', async () => {

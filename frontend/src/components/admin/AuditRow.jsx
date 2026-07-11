@@ -1,16 +1,5 @@
-const ACTION_TEXT_CLASS = {
-  created: 'text-accent',
-  updated: 'text-status-ip-text',
-  deleted: 'text-urgent',
-  viewed: 'text-text-muted',
-}
-
-function formatValue(value) {
-  if (value === null || value === undefined) return '—'
-  if (typeof value === 'boolean') return value ? 'true' : 'false'
-  if (typeof value === 'object') return JSON.stringify(value)
-  return String(value)
-}
+import { Link } from 'react-router-dom'
+import { AUDIT_ACTION_TEXT_CLASS, formatAuditValue } from '../../lib/auditFormat.js'
 
 export default function AuditRow({ entry }) {
   return (
@@ -21,8 +10,15 @@ export default function AuditRow({ entry }) {
       <td className="px-3 py-2 text-[12px] text-text-secondary">{entry.user?.display_name ?? '—'}</td>
       <td className="px-3 py-2 text-[12px] text-text-secondary">
         {entry.entity_type} <span className="text-text-muted">· {entry.entity_id.slice(0, 8)}</span>
+        {entry.task_id && (
+          <Link to={`/tasks?taskId=${entry.task_id}`} className="ml-2 text-accent hover:underline">
+            <i className="ti ti-external-link text-[11px]" /> View task
+          </Link>
+        )}
       </td>
-      <td className={`px-3 py-2 text-[12px] font-medium ${ACTION_TEXT_CLASS[entry.action] ?? 'text-text-secondary'}`}>
+      <td
+        className={`px-3 py-2 text-[12px] font-medium ${AUDIT_ACTION_TEXT_CLASS[entry.action] ?? 'text-text-secondary'}`}
+      >
         {entry.action}
       </td>
       <td className="px-3 py-2 text-[12px] text-text-secondary">
@@ -30,8 +26,8 @@ export default function AuditRow({ entry }) {
           <ul>
             {Object.entries(entry.changed_fields).map(([field, change]) => (
               <li key={field}>
-                <span className="font-medium text-text-primary">{field}</span>: {formatValue(change.from)} →{' '}
-                {formatValue(change.to)}
+                <span className="font-medium text-text-primary">{field}</span>: {formatAuditValue(change.from)} →{' '}
+                {formatAuditValue(change.to)}
               </li>
             ))}
           </ul>

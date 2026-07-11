@@ -23,6 +23,8 @@ const ENTRY_ROW = {
   timestamp: '2026-06-15T10:00:00Z',
   user_id: 'u2',
   user_display_name: 'John',
+  task_id: 'task1',
+  account_id: null,
 }
 
 function mockRes() {
@@ -59,13 +61,25 @@ describe('GET /api/audit-log', () => {
     verifyTokenMock.mockResolvedValue({ sub: 'clerk_caller' })
   })
 
-  it('403s for a non-admin', async () => {
+  it('403s for a non-admin with no task_id (unscoped access)', async () => {
     queryMock.mockImplementation(mockQueryImpl({ caller: MEMBER_ROW }))
 
     const res = mockRes()
     await handler(authedReq(), res)
 
     expect(res.statusCode).toBe(403)
+  })
+
+  it('allows a non-admin when task_id is set, scoped to that task', async () => {
+    queryMock.mockImplementation(mockQueryImpl({ caller: MEMBER_ROW }))
+
+    const res = mockRes()
+    await handler(authedReq({ query: { task_id: 'task1' } }), res)
+
+    expect(res.statusCode).toBe(200)
+    const [sql, params] = queryMock.mock.calls[2]
+    expect(sql).toContain('a.task_id = $1')
+    expect(params[0]).toBe('task1')
   })
 
   it('lists entries with the user shape and changed_fields, newest first', async () => {
@@ -83,10 +97,18 @@ describe('GET /api/audit-log', () => {
       action: 'updated',
       changed_fields: { status: { from: 'backlog', to: 'in_progress' } },
       timestamp: '2026-06-15T10:00:00Z',
+      task_id: 'task1',
+      account_id: null,
     })
     expect(res.body.total).toBe(1)
     const [sql] = queryMock.mock.calls[2]
     expect(sql).toContain('ORDER BY a.timestamp DESC')
+    // Regression guard: toEntry() reads row.task_id/row.account_id, but a
+    // mocked row has them regardless of what's actually selected — this is
+    // the only thing that would have caught the real SELECT list missing
+    // those two columns (found via live verification, not this suite).
+    expect(sql).toContain('a.task_id')
+    expect(sql).toContain('a.account_id')
   })
 
   it('returns user: null when the actor was deleted (user_id set null on delete)', async () => {

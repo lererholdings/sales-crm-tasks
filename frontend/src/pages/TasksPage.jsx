@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { usePreferences } from '../hooks/usePreferences.js'
 import { useTasks } from '../hooks/useTasks.js'
 import { useApiClient } from '../lib/apiClient.js'
@@ -20,7 +21,12 @@ export default function TasksPage() {
   const { preferences, updatePreferences } = usePreferences()
   const apiClient = useApiClient()
   const [showNewModal, setShowNewModal] = useState(false)
-  const [selectedTaskId, setSelectedTaskId] = useState(null)
+  // Deep-link entry point (e.g. "View task" from an audit log entry) —
+  // opens straight to that task on mount. One-directional: opening a task
+  // from the table itself doesn't push a URL param, this is just an
+  // entry point, not synced URL state.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [selectedTaskId, setSelectedTaskId] = useState(() => searchParams.get('taskId'))
   const [taskPendingDelete, setTaskPendingDelete] = useState(null)
 
   const handleSort = useCallback((sortKey) => {
@@ -67,7 +73,19 @@ export default function TasksPage() {
   // rows whose own task object didn't change (see hooks/useTasks.js).
   const handleOpen = useCallback((task) => setSelectedTaskId(task.id), [])
   const handleDeleteRequest = useCallback((task) => setTaskPendingDelete(task), [])
-  const handleClosePanel = useCallback(() => setSelectedTaskId(null), [])
+  const handleClosePanel = useCallback(() => {
+    setSelectedTaskId(null)
+    if (searchParams.has('taskId')) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete('taskId')
+          return next
+        },
+        { replace: true },
+      )
+    }
+  }, [searchParams, setSearchParams])
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId)
 

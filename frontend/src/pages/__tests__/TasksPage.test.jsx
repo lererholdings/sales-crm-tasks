@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const getTokenMock = vi.fn()
@@ -27,9 +28,11 @@ function jsonResponse(body) {
 }
 
 // TasksPage's children (NewTaskModal, TaskSidePanel) each pull in their own
-// accounts/task-types/users/current-user data, so the mock has to route by
-// URL rather than a fixed call sequence. A route value can be a function
-// (url, opts) => body to distinguish GET vs POST/PATCH on the same path.
+// accounts/task-types/users/current-user/audit-log data, so the mock has to
+// route by URL rather than a fixed call sequence. A route value can be a
+// function (url, opts) => body to distinguish GET vs POST/PATCH on the same
+// path. audit-log's default fallback needs the { entries, total } shape,
+// not the plain-array shape every other endpoint here uses.
 function mockFetchByUrl(routes) {
   global.fetch = vi.fn((url, opts) => {
     for (const [pattern, handler] of Object.entries(routes)) {
@@ -38,8 +41,17 @@ function mockFetchByUrl(routes) {
         return Promise.resolve(jsonResponse(body))
       }
     }
+    if (url.startsWith('/api/audit-log')) return Promise.resolve(jsonResponse({ entries: [], total: 0 }))
     return Promise.resolve(jsonResponse([]))
   })
+}
+
+function renderTasksPage(initialEntries = ['/tasks']) {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <TasksPage />
+    </MemoryRouter>,
+  )
 }
 
 describe('TasksPage', () => {
@@ -51,7 +63,7 @@ describe('TasksPage', () => {
   it('loads and displays tasks grouped by account + partner', async () => {
     mockFetchByUrl({ '/api/tasks': [TASK] })
 
-    render(<TasksPage />)
+    renderTasksPage()
 
     await waitFor(() => expect(screen.getByText('RFP response')).toBeTruthy())
     expect(screen.getByText('Acme Corp — PartnerX')).toBeTruthy()
@@ -60,7 +72,7 @@ describe('TasksPage', () => {
   it('opens the new task modal', async () => {
     mockFetchByUrl({ '/api/tasks': [] })
 
-    render(<TasksPage />)
+    renderTasksPage()
     await waitFor(() => expect(screen.getByText('No tasks yet.')).toBeTruthy())
 
     fireEvent.click(screen.getByText('New task'))
@@ -71,7 +83,7 @@ describe('TasksPage', () => {
   it('deletes a task after confirming', async () => {
     mockFetchByUrl({ '/api/tasks': [TASK] })
 
-    render(<TasksPage />)
+    renderTasksPage()
     await waitFor(() => expect(screen.getByText('RFP response')).toBeTruthy())
 
     fireEvent.click(screen.getByLabelText('Task actions'))
@@ -94,7 +106,7 @@ describe('TasksPage', () => {
       '/api/users?me=true': { id: 'u1', display_name: 'Sara', email: 's@x.com', role: 'member' },
     })
 
-    render(<TasksPage />)
+    renderTasksPage()
     await waitFor(() => expect(screen.getByText('RFP response')).toBeTruthy())
     const initialTasksCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/tasks').length
 
@@ -124,7 +136,7 @@ describe('TasksPage', () => {
       '/api/users?me=true': { id: 'u1', display_name: 'Sara', email: 's@x.com', role: 'member' },
     })
 
-    render(<TasksPage />)
+    renderTasksPage()
     await waitFor(() => expect(screen.getByText('RFP response')).toBeTruthy())
     const initialTasksCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/tasks').length
 
@@ -147,10 +159,26 @@ describe('TasksPage', () => {
     expect(screen.getByText(/New note/)).toBeTruthy()
   })
 
+  it('opens a task straight from a ?taskId= deep link, and clears the param on close', async () => {
+    mockFetchByUrl({
+      '/api/tasks/t1?notes_limit': { ...TASK, notes: [], notes_total: 0 },
+      '/api/tasks': [TASK],
+      '/api/users?me=true': { id: 'u1', display_name: 'Sara', email: 's@x.com', role: 'member' },
+    })
+
+    renderTasksPage(['/tasks?taskId=t1'])
+
+    await waitFor(() => expect(screen.getByLabelText('Close task panel')).toBeTruthy())
+    expect(screen.getByText('RFP response', { selector: 'h2' })).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText('Close task panel'))
+    await waitFor(() => expect(screen.queryByLabelText('Close task panel')).toBeFalsy())
+  })
+
   it('cancelling the delete confirmation leaves the task in place', async () => {
     mockFetchByUrl({ '/api/tasks': [TASK] })
 
-    render(<TasksPage />)
+    renderTasksPage()
     await waitFor(() => expect(screen.getByText('RFP response')).toBeTruthy())
 
     fireEvent.click(screen.getByLabelText('Task actions'))

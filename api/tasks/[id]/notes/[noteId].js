@@ -44,7 +44,13 @@ async function handleUpdate(req, res, user) {
 }
 
 const auditedUpdate = withAudit(
-  { table: 'task_notes', entityType: 'task_note', fields: NOTE_AUDIT_FIELDS, idParam: 'noteId' },
+  {
+    table: 'task_notes',
+    entityType: 'task_note',
+    fields: NOTE_AUDIT_FIELDS,
+    idParam: 'noteId',
+    deriveContext: (row) => ({ taskId: row.task_id }),
+  },
   handleUpdate,
 )
 

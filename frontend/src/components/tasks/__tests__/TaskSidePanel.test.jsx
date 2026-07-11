@@ -42,8 +42,10 @@ const TASK_DETAIL = {
 
 const CURRENT_USER = { id: 'u1', display_name: 'Sara', email: 's@x.com', role: 'member' }
 
-// TaskSidePanel pulls in accounts/task-types/users/current-user alongside
-// the task itself, so the mock routes by URL prefix rather than call order.
+// TaskSidePanel pulls in accounts/task-types/users/current-user/audit-log
+// alongside the task itself, so the mock routes by URL prefix rather than
+// call order. audit-log's default fallback needs the { entries, total }
+// shape, not the plain-array shape every other endpoint here uses.
 function mockFetchByUrl(routes) {
   global.fetch = vi.fn((url, opts) => {
     for (const [pattern, handler] of Object.entries(routes)) {
@@ -52,6 +54,7 @@ function mockFetchByUrl(routes) {
         return Promise.resolve(jsonResponse(body))
       }
     }
+    if (url.startsWith('/api/audit-log')) return Promise.resolve(jsonResponse({ entries: [], total: 0 }))
     return Promise.resolve(jsonResponse([]))
   })
 }
@@ -177,5 +180,37 @@ describe('TaskSidePanel', () => {
 
     expect(screen.getByText('pre-sale · Demo')).toBeTruthy()
     expect(screen.queryByText('pre-sale · Retired')).toBeFalsy()
+  })
+
+  it('shows the task\'s own audit history in the collapsed History section', async () => {
+    mockFetchByUrl({
+      '/api/tasks/t1?notes_limit': TASK_DETAIL,
+      '/api/users?me=true': CURRENT_USER,
+      '/api/audit-log': {
+        entries: [
+          {
+            id: 'log1',
+            entity_type: 'task',
+            entity_id: 't1',
+            user: { id: 'u2', display_name: 'John' },
+            action: 'updated',
+            changed_fields: { status: { from: 'backlog', to: 'in_progress' } },
+            timestamp: '2026-06-15T10:00:00Z',
+          },
+        ],
+        total: 1,
+      },
+    })
+
+    render(<TaskSidePanel taskId="t1" onClose={vi.fn()} onUpdated={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('History (1)')).toBeTruthy())
+
+    fireEvent.click(screen.getByText('History (1)'))
+
+    expect(screen.getByText('John')).toBeTruthy()
+    expect(screen.getByText(/backlog/)).toBeTruthy()
+
+    const auditCall = global.fetch.mock.calls.find(([url]) => url.startsWith('/api/audit-log'))
+    expect(auditCall[0]).toBe('/api/audit-log?task_id=t1&limit=20&offset=0')
   })
 })
