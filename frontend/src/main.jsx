@@ -7,6 +7,13 @@ import App from './App.jsx'
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
+// Mirrors vite.config.js's `base` — '/' normally, or e.g. '/sales-tasks/'
+// when mounted under a path prefix (see docs/design.md's Multi Zones
+// decision log entry). React Router's basename doesn't want a trailing
+// slash except when it's exactly the root.
+const BASE_PATH = import.meta.env.BASE_URL
+const ROUTER_BASENAME = BASE_PATH === '/' ? '/' : BASE_PATH.replace(/\/$/, '')
+
 if (!CLERK_PUBLISHABLE_KEY) {
   createRoot(document.getElementById('root')).render(
     <StrictMode>
@@ -22,8 +29,8 @@ if (!CLERK_PUBLISHABLE_KEY) {
 } else {
   createRoot(document.getElementById('root')).render(
     <StrictMode>
-      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} afterSignOutUrl="/">
-        <BrowserRouter>
+      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} afterSignOutUrl={BASE_PATH}>
+        <BrowserRouter basename={ROUTER_BASENAME}>
           <App />
         </BrowserRouter>
       </ClerkProvider>
