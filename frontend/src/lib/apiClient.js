@@ -2,8 +2,14 @@ import { useMemo } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { dispatchSessionExpired } from './sessionEvents.js'
 
+// Mirrors vite.config.js's `base` — fetch() paths resolve against the
+// domain root, not the current URL, so API calls need the same prefix as
+// page routes when mounted under a path (see docs/design.md's Multi Zones
+// decision log entry). '/' → '' (unchanged '/api...' behavior).
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '')
+
 async function doFetch(token, method, path, body) {
-  return fetch(`/api${path}`, {
+  return fetch(`${API_BASE}/api${path}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
