@@ -66,13 +66,13 @@ Living index, grouped by target milestone — **check this section at the start 
 
 **Milestone 9 — Hardening and edge cases**
 - [#11](https://github.com/lererholdings/sales-crm-tasks/issues/11) — Spike: evaluate Kinde or Auth0 as an alternative to Clerk (throwaway branch, adopt only on a clear win)
+- [#2](https://github.com/lererholdings/sales-crm-tasks/issues/2) — Display name/email sync via custom Clerk session token claims. Implemented and live-verified on branch `milestone-9-jwt-claims-sync` (`lib/auth.js`'s `resolveOrProvision` diffs the token's claims against the stored row on every login, writes only on change); pending PR/merge.
 
 **Milestone 10 — Deployment and go-live**
 - [#1](https://github.com/lererholdings/sales-crm-tasks/issues/1) — Clerk sole access gate
 - [#3](https://github.com/lererholdings/sales-crm-tasks/issues/3) — Prod admin seeding
 
 **Unscheduled**
-- [#2](https://github.com/lererholdings/sales-crm-tasks/issues/2) — Display name sync via JWT claims
 - [#12](https://github.com/lererholdings/sales-crm-tasks/issues/12) — Post CI test summary as a PR comment, not just the Actions run page
 - [#14](https://github.com/lererholdings/sales-crm-tasks/issues/14) — Model partner/distributor as entities with account-level defaults + sync-confirmation UX (open architectural question, see design.md section 12)
 - [#15](https://github.com/lererholdings/sales-crm-tasks/issues/15) — Suggest restoring a similar archived account on new-account create (issue #5 part 2 — has its own open fuzzy-match design question)
