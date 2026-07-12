@@ -51,7 +51,7 @@ function renderCell(columnKey, task, eta) {
 // — relies on onOpen/onDuplicate/onDeleteRequest and `columns` being stable
 // references (useCallback/useMemo upstream), since a new reference every
 // render would defeat memo regardless of whether `task` itself changed.
-function TaskRow({ task, columns, onOpen, onDuplicate, onDeleteRequest }) {
+function TaskRow({ task, columns, onOpen, onDuplicate, onDeleteRequest, onLinkToAccount }) {
   const eta = formatEta(task.eta)
   const deleted = Boolean(task.deleted_at)
 
@@ -61,7 +61,13 @@ function TaskRow({ task, columns, onOpen, onDuplicate, onDeleteRequest }) {
       onClick={() => onOpen(task)}
     >
       <td className="px-3 py-2">
-        <TaskNameCell task={task} onOpen={onOpen} onDuplicate={onDuplicate} onDeleteRequest={onDeleteRequest} />
+        <TaskNameCell
+          task={task}
+          onOpen={onOpen}
+          onDuplicate={onDuplicate}
+          onDeleteRequest={onDeleteRequest}
+          onLinkToAccount={onLinkToAccount}
+        />
       </td>
       {columns.map((col) => {
         const cellClass =

@@ -175,6 +175,40 @@ describe('TasksPage', () => {
     await waitFor(() => expect(screen.queryByLabelText('Close task panel')).toBeFalsy())
   })
 
+  it('links a partner-only task to an account, updating it in place without refetching the list', async () => {
+    const PARTNER_ONLY_TASK = { ...TASK, id: 't2', account: null, partner_name: 'PartnerZ' }
+    mockFetchByUrl({
+      '/api/tasks/t2': (_url, opts) =>
+        opts?.method === 'PATCH' ? { ...PARTNER_ONLY_TASK, account: { id: 'a1', name: 'Acme Corp' } } : PARTNER_ONLY_TASK,
+      '/api/tasks': [PARTNER_ONLY_TASK],
+      '/api/accounts': [{ id: 'a1', name: 'Acme Corp', deleted_at: null }],
+    })
+
+    renderTasksPage()
+    await waitFor(() => expect(screen.getByText('RFP response')).toBeTruthy())
+    const initialTasksCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/tasks').length
+
+    fireEvent.click(screen.getByLabelText('Task actions'))
+    fireEvent.click(screen.getByText('Link to account'))
+    expect(screen.getByText('Link to account', { selector: 'h2' })).toBeTruthy()
+
+    fireEvent.click(await screen.findByText('Select account…'))
+    fireEvent.click(screen.getByText('Acme Corp'))
+    fireEvent.click(screen.getByRole('button', { name: 'Link' }))
+
+    await waitFor(() => {
+      const patchCall = global.fetch.mock.calls.find(([url, opts]) => url === '/api/tasks/t2' && opts?.method === 'PATCH')
+      expect(patchCall).toBeDefined()
+      expect(JSON.parse(patchCall[1].body)).toEqual({ account_id: 'a1' })
+    })
+
+    await waitFor(() => expect(screen.queryByText('Link to account', { selector: 'h2' })).toBeFalsy())
+    expect(screen.getByText('Acme Corp — PartnerZ')).toBeTruthy() // group header now reflects the linked account
+
+    const afterLinkCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/tasks').length
+    expect(afterLinkCalls).toBe(initialTasksCalls) // no refetch triggered
+  })
+
   it('cancelling the delete confirmation leaves the task in place', async () => {
     mockFetchByUrl({ '/api/tasks': [TASK] })
 
