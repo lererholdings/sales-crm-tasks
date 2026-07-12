@@ -66,7 +66,6 @@ Living index, grouped by target milestone — **check this section at the start 
 
 **Milestone 9 — Hardening and edge cases**
 - [#11](https://github.com/lererholdings/sales-crm-tasks/issues/11) — Spike: evaluate Kinde or Auth0 as an alternative to Clerk (throwaway branch, adopt only on a clear win)
-- [#2](https://github.com/lererholdings/sales-crm-tasks/issues/2) — Display name/email sync via custom Clerk session token claims. Implemented and live-verified on branch `milestone-9-jwt-claims-sync` (`lib/auth.js`'s `resolveOrProvision` diffs the token's claims against the stored row on every login, writes only on change); pending PR/merge.
 
 **Milestone 10 — Deployment and go-live**
 - [#1](https://github.com/lererholdings/sales-crm-tasks/issues/1) — Clerk sole access gate
@@ -79,6 +78,7 @@ Living index, grouped by target milestone — **check this section at the start 
 - [#20](https://github.com/lererholdings/sales-crm-tasks/issues/20) — Task note lifecycle events (add/remove, not edits) should also write a task-level audit_log summary entry, extending the existing `notes_deleted` cascade-summary pattern from delete to create. Found via Milestone 8 live testing — filtering the admin Audit Log to `entity_type=task` currently excludes note activity entirely.
 
 **Recently closed**
+- [#2](https://github.com/lererholdings/sales-crm-tasks/issues/2) — Display name/email sync via custom Clerk session token claims. Shipped in PR #22: `lib/auth.js`'s `resolveOrProvision` diffs an existing user's stored row against the session token's custom claims (`email`/`first_name`/`last_name`, configured in Clerk Dashboard → Sessions) on every login, writing only when something actually changed — no extra Clerk API call, first-login provisioning unchanged.
 - [#7](https://github.com/lererholdings/sales-crm-tasks/issues/7) — Accounts list sortable columns + per-column filtering. Shipped in PR #18: `GET /api/accounts` supports `country` filtering (ILIKE) and `sort_by`/`sort_dir` (name, country, acv, updated_at); archived accounts always sort last regardless of the chosen column.
 - [#9](https://github.com/lererholdings/sales-crm-tasks/issues/9) — Accounts list ACV column + per-user column visibility/order. Shipped in PR #18: new `accounts_column_order`/`accounts_column_visibility` columns on `user_preferences` (migration `20260705110729_accounts_column_preferences.sql`), a `ColumnManager` popover in `AccountToolbar`. ACV kept hidden by default per the design.md decision log — only fetched via `?include=acv` once explicitly made visible, preserving the original opt-in-only intent rather than flipping the privacy default.
 - [#10](https://github.com/lererholdings/sales-crm-tasks/issues/10) — No UI planned for admins to view soft-deleted tasks. Shipped in Milestone 6 (PR #17): admin-only "Show deleted" toggle in the task toolbar, wired to `?include_deleted=true`; deleted tasks show a `(deleted)` tag and dimmed row (matches the archived-account convention). UI-level test coverage added (admin-only visibility, toggle behavior).
