@@ -44,12 +44,14 @@ _Milestone 4 branch note: this specific edit is a real (non-empty) markdown-only
 | `VITE_CLERK_PUBLISHABLE_KEY` | — | yes | no | yes | yes |
 | `TEST_AUTH_BYPASS_SECRET` | yes | — | yes | **never** | yes |
 | `VERCEL_PROTECTION_BYPASS_SECRET` | yes (verification only — not read by app code) | — | yes | n/a | n/a |
+| `VITE_BASE_PATH` | — | — | no | `/sales-tasks/` | — (unset → defaults to `/`) |
 
 Where to get/rotate each value:
 - `DATABASE_URL` — Supabase → Project Settings → Database → Connection Pooling → mode "Transaction" (port 6543, not the direct :5432 one)
 - `CLERK_SECRET_KEY` / `VITE_CLERK_PUBLISHABLE_KEY` — Clerk dashboard → API Keys
 - `TEST_AUTH_BYPASS_SECRET` — self-generated (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`), not tied to any external service
 - `VERCEL_PROTECTION_BYPASS_SECRET` — Vercel → Project Settings → Deployment Protection → "Protection Bypass for Automation"
+- `VITE_BASE_PATH` — self-defined, not tied to any external service. Set to `/sales-tasks/` only on Production (Milestone 10, Multi Zones — see design.md's decision log and [website#2](https://github.com/lererholdings/website/pull/2)), scoped to Production only so Preview deployments keep serving at `/` for normal branch/PR testing. Consumed by `frontend/vite.config.js` (`base`), `frontend/src/main.jsx` (React Router `basename`), and `frontend/src/lib/apiClient.js` (API call prefixing) — see [#24](https://github.com/lererholdings/sales-crm-tasks/pull/24). Known tradeoff once live: the raw `sales-crm-tasks-lerers-projects.vercel.app` URL stops working when visited directly (tracked in [#25](https://github.com/lererholdings/sales-crm-tasks/issues/25)).
 
 ⚠️ Vercel only injects env var values into deployments created *after* the value was set/changed — a fresh push (or manual redeploy) is needed to pick up a change to an existing var.
 
