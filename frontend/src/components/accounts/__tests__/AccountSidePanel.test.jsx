@@ -99,6 +99,23 @@ describe('AccountSidePanel archive (issue #5)', () => {
     expect(deleteCall[0]).toBe('/api/accounts/a1')
   })
 
+  it('shows an inline validation error when saving with a blank name, without calling the API', async () => {
+    mockFetchByUrl({
+      '/api/accounts/a1': ACCOUNT,
+      '/api/users?me=true': { id: 'u1', display_name: 'Admin', email: 'a@x.com', role: 'admin' },
+    })
+
+    render(<AccountSidePanel accountId="a1" onClose={vi.fn()} onUpdated={vi.fn()} />)
+    await waitFor(() => expect(screen.getByDisplayValue('Acme Corp')).toBeTruthy())
+
+    fireEvent.change(screen.getByDisplayValue('Acme Corp'), { target: { value: '' } })
+    fireEvent.click(screen.getByText('Save'))
+
+    expect(screen.getByText('Name is required.')).toBeTruthy()
+    const patchCall = global.fetch.mock.calls.find(([, opts]) => opts?.method === 'PATCH')
+    expect(patchCall).toBeUndefined()
+  })
+
   it('shows an error when archiving fails (e.g. active tasks)', async () => {
     global.fetch = vi.fn((url, opts) => {
       if (url.startsWith('/api/accounts/a1') && opts?.method === 'DELETE') {

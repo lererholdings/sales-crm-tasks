@@ -51,4 +51,16 @@ describe('NewTaskModal', () => {
     expect(screen.getByText('pre-sale · Demo')).toBeTruthy()
     expect(screen.queryByText('pre-sale · Retired')).toBeFalsy()
   })
+
+  it('shows inline validation errors for missing required fields on submit, without calling onCreate', () => {
+    const onCreate = vi.fn()
+    render(<NewTaskModal tasks={[]} onClose={vi.fn()} onCreate={onCreate} />)
+
+    fireEvent.click(screen.getByText('Create'))
+
+    expect(screen.getByText('Task name is required.')).toBeTruthy()
+    expect(screen.getByText('Type is required.')).toBeTruthy()
+    expect(screen.getByText('Assignee is required.')).toBeTruthy()
+    expect(onCreate).not.toHaveBeenCalled()
+  })
 })

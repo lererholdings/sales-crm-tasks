@@ -17,12 +17,14 @@ const STATUS_OPTIONS = TASK_STATUSES.map((s) => ({ value: s, label: STATUS_LABEL
 const PRIORITY_OPTIONS = TASK_PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABELS[p] }))
 
 export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, onUpdated, onNotesChanged }) {
-  const { task, notes, notesTotal, loading, updateTask, loadMoreNotes, addNote, editNote } = useTask(taskId)
+  const { task, notes, notesTotal, loading, error: loadError, updateTask, loadMoreNotes, addNote, editNote } =
+    useTask(taskId)
   const { entries: historyEntries, total: historyTotal, loading: historyLoading, loadMore: loadMoreHistory } =
     useTaskHistory(taskId)
-  const { accounts } = useAccounts()
-  const { taskTypes } = useTaskTypes()
-  const { users } = useUsers()
+  const { accounts, error: accountsError } = useAccounts()
+  const { taskTypes, error: taskTypesError } = useTaskTypes()
+  const { users, error: usersError } = useUsers()
+  const optionsError = accountsError || taskTypesError || usersError
   const { user: currentUser } = useCurrentUser()
 
   const [form, setForm] = useState(null)
@@ -114,9 +116,17 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
       </div>
 
       {loading && !task && <p className="p-4 text-sm text-text-secondary">Loading…</p>}
+      {!loading && loadError && !task && (
+        <p className="p-4 text-sm text-urgent">Failed to load task.</p>
+      )}
 
       {task && form && (
         <>
+          {optionsError && (
+            <p className="border-b border-border bg-urgent/10 p-2 text-center text-[12px] text-urgent">
+              Some dropdown options failed to load. Refresh to see the full list.
+            </p>
+          )}
           <div className="border-b border-border p-4">
             <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-text-muted">Account</p>
             <div className="mb-2">
