@@ -41,6 +41,18 @@ describe('AccountSidePanel archive (issue #5)', () => {
     getTokenMock.mockResolvedValue('token')
   })
 
+  it('does not render an unsafe (non-http) sfdc_account_url as a link', async () => {
+    mockFetchByUrl({
+      '/api/accounts/a1': { ...ACCOUNT, sfdc_account_url: 'javascript:alert(1)' },
+      '/api/users?me=true': { id: 'u1', display_name: 'Admin', email: 'a@x.com', role: 'admin' },
+    })
+
+    render(<AccountSidePanel accountId="a1" onClose={vi.fn()} onUpdated={vi.fn()} />)
+    await waitFor(() => expect(screen.getByDisplayValue('Acme Corp')).toBeTruthy())
+
+    expect(screen.queryByText('SFDC account')).toBeFalsy()
+  })
+
   it('shows the Archive button to an admin', async () => {
     mockFetchByUrl({
       '/api/accounts/a1': ACCOUNT,

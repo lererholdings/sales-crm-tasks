@@ -2,6 +2,8 @@ import { withAuth } from '../../lib/auth.js'
 import { query } from '../../lib/db.js'
 import { logFieldChanges } from '../../lib/audit.js'
 import { sendError } from '../../lib/errors.js'
+import { ACCOUNT_TEXT_FIELD_RULES } from '../../lib/accounts.js'
+import { validateTextFields } from '../../lib/validation.js'
 
 function toAccount(row) {
   return {
@@ -41,6 +43,15 @@ export default withAuth(async (req, res, user) => {
     const fieldsToUpdate = PATCHABLE_FIELDS.filter((field) => field in body)
     if (fieldsToUpdate.length === 0) {
       return sendError(res, 400, 'No updatable fields provided')
+    }
+
+    const textFieldError = validateTextFields(body, ACCOUNT_TEXT_FIELD_RULES)
+    if (textFieldError) return sendError(res, 400, textFieldError)
+    if ('name' in body && (typeof body.name !== 'string' || !body.name.trim())) {
+      return sendError(res, 400, 'name cannot be empty')
+    }
+    if ('country' in body && (typeof body.country !== 'string' || !body.country.trim())) {
+      return sendError(res, 400, 'country cannot be empty')
     }
 
     const { rows: currentRows } = await query('SELECT * FROM accounts WHERE id = $1', [id])

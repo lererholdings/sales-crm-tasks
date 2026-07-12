@@ -2,9 +2,11 @@ import { withAuth } from '../../lib/auth.js'
 import { withAudit } from '../../lib/audit.js'
 import { query } from '../../lib/db.js'
 import { sendError } from '../../lib/errors.js'
+import { validateTextFields } from '../../lib/validation.js'
 
 const VALID_CATEGORIES = ['pre-sale', 'post-sale', 'account']
 const TASK_TYPE_AUDIT_FIELDS = ['category', 'name', 'active']
+const TASK_TYPE_TEXT_FIELD_RULES = { name: { maxLength: 100 } }
 
 async function handleGet(req, res, user) {
   const { rows } = await query(
@@ -18,11 +20,14 @@ async function handleGet(req, res, user) {
 async function handleCreate(req, res, user) {
   if (user.role !== 'admin') return sendError(res, 403, 'Forbidden')
 
-  const { category, name } = req.body ?? {}
+  const body = req.body ?? {}
+  const { category, name } = body
   if (!VALID_CATEGORIES.includes(category)) {
     return sendError(res, 400, `category must be one of: ${VALID_CATEGORIES.join(', ')}`)
   }
-  if (!name) return sendError(res, 400, 'name is required')
+  const textFieldError = validateTextFields(body, TASK_TYPE_TEXT_FIELD_RULES)
+  if (textFieldError) return sendError(res, 400, textFieldError)
+  if (!name || typeof name !== 'string' || !name.trim()) return sendError(res, 400, 'name is required')
 
   const { rows } = await query(
     'INSERT INTO task_types (category, name) VALUES ($1, $2) RETURNING id',
@@ -51,7 +56,9 @@ async function handleUpdate(req, res, user) {
   if (fieldsToUpdate.length === 0) {
     return sendError(res, 400, 'No updatable fields provided')
   }
-  if ('name' in body && !body.name) {
+  const textFieldError = validateTextFields(body, TASK_TYPE_TEXT_FIELD_RULES)
+  if (textFieldError) return sendError(res, 400, textFieldError)
+  if ('name' in body && (typeof body.name !== 'string' || !body.name.trim())) {
     return sendError(res, 400, 'name cannot be empty')
   }
   if ('active' in body && typeof body.active !== 'boolean') {

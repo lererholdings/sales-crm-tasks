@@ -1,13 +1,18 @@
 import { withAuth } from '../../../../lib/auth.js'
 import { withAudit } from '../../../../lib/audit.js'
 import { query } from '../../../../lib/db.js'
-import { NOTE_AUDIT_FIELDS, NOTE_BASE_SELECT, toNote } from '../../../../lib/notes.js'
+import { MAX_NOTE_LENGTH, NOTE_AUDIT_FIELDS, NOTE_BASE_SELECT, toNote } from '../../../../lib/notes.js'
 import { sendError } from '../../../../lib/errors.js'
 
 async function handleUpdate(req, res, user) {
   const { noteId } = req.query
   const { content } = req.body ?? {}
-  if (!content) return sendError(res, 400, 'content is required')
+  if (!content || typeof content !== 'string' || !content.trim()) {
+    return sendError(res, 400, 'content is required')
+  }
+  if (content.length > MAX_NOTE_LENGTH) {
+    return sendError(res, 400, `content must be ${MAX_NOTE_LENGTH} characters or fewer`)
+  }
 
   const { rows } = await query(
     'SELECT id, task_id, user_id, created_at FROM task_notes WHERE id = $1 AND deleted_at IS NULL',

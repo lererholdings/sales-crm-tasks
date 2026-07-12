@@ -1,7 +1,7 @@
 import { withAuth } from '../../../../lib/auth.js'
 import { withAudit } from '../../../../lib/audit.js'
 import { query } from '../../../../lib/db.js'
-import { NOTE_AUDIT_FIELDS, NOTE_BASE_SELECT, getNotesPreviewCount, toNote } from '../../../../lib/notes.js'
+import { MAX_NOTE_LENGTH, NOTE_AUDIT_FIELDS, NOTE_BASE_SELECT, getNotesPreviewCount, toNote } from '../../../../lib/notes.js'
 import { sendError } from '../../../../lib/errors.js'
 
 async function findTask(taskId) {
@@ -48,7 +48,12 @@ async function handleList(req, res, user) {
 async function handleCreate(req, res, user) {
   const { id: taskId } = req.query
   const { content } = req.body ?? {}
-  if (!content) return sendError(res, 400, 'content is required')
+  if (!content || typeof content !== 'string' || !content.trim()) {
+    return sendError(res, 400, 'content is required')
+  }
+  if (content.length > MAX_NOTE_LENGTH) {
+    return sendError(res, 400, `content must be ${MAX_NOTE_LENGTH} characters or fewer`)
+  }
 
   const task = await findTask(taskId)
   if (!task || task.deleted_at) return sendError(res, 404, 'Task not found')

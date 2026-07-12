@@ -266,6 +266,53 @@ describe('POST /api/tasks', () => {
     expect(res.statusCode).toBe(400)
   })
 
+  it('rejects a task_name over the length limit', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(
+      authedReq({
+        method: 'POST',
+        body: { task_name: 'a'.repeat(301), assignee_id: 'assignee1', task_type_id: 'tt1' },
+      }),
+      res,
+    )
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a whitespace-only task_name', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(
+      authedReq({ method: 'POST', body: { task_name: '   ', assignee_id: 'assignee1', task_type_id: 'tt1' } }),
+      res,
+    )
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a non-http(s) sfdc_task_url', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(
+      authedReq({
+        method: 'POST',
+        body: {
+          task_name: 'RFP',
+          assignee_id: 'assignee1',
+          task_type_id: 'tt1',
+          sfdc_task_url: 'javascript:alert(1)',
+        },
+      }),
+      res,
+    )
+
+    expect(res.statusCode).toBe(400)
+  })
+
   it('creates a task and logs a created audit entry', async () => {
     queryMock.mockImplementation(mockQueryImpl())
 

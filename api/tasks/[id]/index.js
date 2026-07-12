@@ -1,8 +1,9 @@
 import { withAuth } from '../../../lib/auth.js'
 import { withAudit, logFieldChanges } from '../../../lib/audit.js'
 import { query } from '../../../lib/db.js'
-import { TASK_AUDIT_FIELDS, TASK_BASE_SELECT, toTask } from '../../../lib/tasks.js'
+import { TASK_AUDIT_FIELDS, TASK_BASE_SELECT, TASK_TEXT_FIELD_RULES, toTask } from '../../../lib/tasks.js'
 import { sendError } from '../../../lib/errors.js'
+import { validateTextFields } from '../../../lib/validation.js'
 
 async function fetchPaginatedNotes(taskId, limit, offset) {
   const { rows } = await query(
@@ -55,6 +56,12 @@ async function handleUpdate(req, res, user) {
 
   if (fieldsToUpdate.length === 0) {
     return sendError(res, 400, 'No updatable fields provided')
+  }
+
+  const textFieldError = validateTextFields(body, TASK_TEXT_FIELD_RULES)
+  if (textFieldError) return sendError(res, 400, textFieldError)
+  if ('task_name' in body && !body.task_name.trim()) {
+    return sendError(res, 400, 'task_name cannot be empty')
   }
 
   const { rows: existing } = await query('SELECT id FROM tasks WHERE id = $1', [id])

@@ -2,6 +2,8 @@ import { withAuth } from '../../lib/auth.js'
 import { query } from '../../lib/db.js'
 import { logFieldChanges, toCreatedChanges } from '../../lib/audit.js'
 import { sendError } from '../../lib/errors.js'
+import { ACCOUNT_TEXT_FIELD_RULES } from '../../lib/accounts.js'
+import { validateTextFields } from '../../lib/validation.js'
 
 // Allowlisted so sort_by (a raw query param) can never be interpolated
 // directly into SQL — anything not in this map falls back to the default.
@@ -56,8 +58,12 @@ export default withAuth(async (req, res, user) => {
   }
 
   if (req.method === 'POST') {
-    const { name, country, acv, sfdc_account_url: sfdcAccountUrl } = req.body ?? {}
-    if (!name || !country) {
+    const body = req.body ?? {}
+    const { name, country, acv, sfdc_account_url: sfdcAccountUrl } = body
+
+    const textFieldError = validateTextFields(body, ACCOUNT_TEXT_FIELD_RULES)
+    if (textFieldError) return sendError(res, 400, textFieldError)
+    if (!name || typeof name !== 'string' || !name.trim() || !country || typeof country !== 'string' || !country.trim()) {
       return sendError(res, 400, 'name and country are required')
     }
 

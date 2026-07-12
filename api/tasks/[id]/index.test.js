@@ -191,6 +191,33 @@ describe('PATCH /api/tasks/:id', () => {
     expect(res.statusCode).toBe(404)
   })
 
+  it('rejects a task_name over the length limit', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { task_name: 'a'.repeat(301) } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects setting task_name to a whitespace-only value', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { task_name: '   ' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a non-http(s) sfdc_task_url', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { sfdc_task_url: 'javascript:alert(1)' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
   it('updates the task and logs an updated audit entry with the diff', async () => {
     queryMock.mockImplementation(
       mockQueryImpl({

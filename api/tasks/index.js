@@ -4,12 +4,14 @@ import { query } from '../../lib/db.js'
 import {
   TASK_AUDIT_FIELDS,
   TASK_BASE_SELECT,
+  TASK_TEXT_FIELD_RULES,
   VALID_PRIORITIES,
   VALID_STATUSES,
   attachNotes,
   toTask,
 } from '../../lib/tasks.js'
 import { sendError } from '../../lib/errors.js'
+import { validateTextFields } from '../../lib/validation.js'
 
 // Allowlisted so sort_by (a raw query param) can never be interpolated
 // directly into SQL — anything not in this map falls back to the default.
@@ -98,7 +100,9 @@ async function handleCreate(req, res, user) {
   const body = req.body ?? {}
   const { task_name: taskName, assignee_id: assigneeId, task_type_id: taskTypeId } = body
 
-  if (!taskName || !assigneeId || !taskTypeId) {
+  const textFieldError = validateTextFields(body, TASK_TEXT_FIELD_RULES)
+  if (textFieldError) return sendError(res, 400, textFieldError)
+  if (!taskName || typeof taskName !== 'string' || !taskName.trim() || !assigneeId || !taskTypeId) {
     return sendError(res, 400, 'task_name, assignee_id, and task_type_id are required')
   }
 

@@ -1,3 +1,5 @@
+import { isSafeUrl } from '../../lib/safeUrl.js'
+
 const SECONDARY_TEXT = 'text-[13px] text-text-secondary'
 const SECONDARY_TEXT_COLUMNS = new Set(['country', 'last_updated'])
 
@@ -8,7 +10,7 @@ function renderCell(columnKey, account) {
     case 'acv':
       return account.acv == null ? '—' : account.acv.toLocaleString()
     case 'sfdc':
-      return account.sfdc_account_url ? (
+      return isSafeUrl(account.sfdc_account_url) ? (
         <a
           href={account.sfdc_account_url}
           target="_blank"

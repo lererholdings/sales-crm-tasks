@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useCurrentUser } from '../../hooks/useCurrentUser.js'
 import { useApiClient } from '../../lib/apiClient.js'
+import { isSafeUrl } from '../../lib/safeUrl.js'
 import ConfirmDialog from '../ui/ConfirmDialog.jsx'
 import SidePanel from '../ui/SidePanel.jsx'
 
@@ -144,7 +145,7 @@ export default function AccountSidePanel({ accountId, onClose, onUpdated }) {
             />
           </label>
 
-          {account?.sfdc_account_url && (
+          {isSafeUrl(account?.sfdc_account_url) && (
             <a
               href={account.sfdc_account_url}
               target="_blank"

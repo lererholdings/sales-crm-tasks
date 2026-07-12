@@ -99,6 +99,24 @@ describe('PATCH /api/accounts/:id', () => {
     expect(res.statusCode).toBe(404)
   })
 
+  it('rejects setting name to a whitespace-only value', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { name: '   ' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a non-http(s) sfdc_account_url', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { sfdc_account_url: 'javascript:alert(1)' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
   it('updates acv and writes an audit_log entry with the {from, to} diff', async () => {
     queryMock
       .mockResolvedValueOnce({ rows: [CALLER_ROW] })

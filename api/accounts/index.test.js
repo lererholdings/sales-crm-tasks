@@ -151,6 +151,30 @@ describe('POST /api/accounts', () => {
     expect(res.statusCode).toBe(400)
   })
 
+  it('rejects a name over the length limit', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'POST', body: { name: 'a'.repeat(301), country: 'AU' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a non-http(s) sfdc_account_url', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(
+      authedReq({
+        method: 'POST',
+        body: { name: 'Acme', country: 'AU', sfdc_account_url: 'javascript:alert(1)' },
+      }),
+      res,
+    )
+
+    expect(res.statusCode).toBe(400)
+  })
+
   it('creates an account and returns it with acv', async () => {
     queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] }).mockResolvedValueOnce({
       rows: [{ id: 'a1', name: 'Acme', country: 'AU', sfdc_account_url: null, acv: '120000.00', updated_at: 't' }],

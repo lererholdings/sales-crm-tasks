@@ -6,6 +6,7 @@ import { useTaskHistory } from '../../hooks/useTaskHistory.js'
 import { useTaskTypes } from '../../hooks/useTaskTypes.js'
 import { useUsers } from '../../hooks/useUsers.js'
 import { PRIORITY_LABELS, STATUS_LABELS, TASK_PRIORITIES, TASK_STATUSES } from '../../lib/constants.js'
+import { isSafeUrl } from '../../lib/safeUrl.js'
 import PriorityBadge from '../ui/PriorityBadge.jsx'
 import SearchableSelect from '../ui/SearchableSelect.jsx'
 import SidePanel from '../ui/SidePanel.jsx'
@@ -166,7 +167,7 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
               </div>
             )}
             <div className="flex gap-3">
-              {task.account?.sfdc_account_url && (
+              {isSafeUrl(task.account?.sfdc_account_url) && (
                 <a
                   href={task.account.sfdc_account_url}
                   target="_blank"
@@ -176,7 +177,7 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
                   <i className="ti ti-external-link" /> SFDC account
                 </a>
               )}
-              {task.sfdc_task_url && (
+              {isSafeUrl(task.sfdc_task_url) && (
                 <a
                   href={task.sfdc_task_url}
                   target="_blank"

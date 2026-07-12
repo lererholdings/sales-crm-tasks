@@ -104,6 +104,24 @@ describe('PATCH /api/tasks/:id/notes/:noteId', () => {
     expect(res.statusCode).toBe(400)
   })
 
+  it('400s for whitespace-only content', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ body: { content: '   ' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('400s for content over the length limit', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ body: { content: 'a'.repeat(10001) } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
   it('404s for a nonexistent note', async () => {
     queryMock.mockImplementation(mockQueryImpl({ noteExists: false }))
 
