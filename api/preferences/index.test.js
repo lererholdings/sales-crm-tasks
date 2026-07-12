@@ -94,6 +94,7 @@ describe('PATCH /api/preferences', () => {
     await handler(authedReq({ method: 'PATCH', body: {} }), res)
 
     expect(res.statusCode).toBe(400)
+    expect(res.body).toEqual({ error: 'No updatable fields provided', code: 'VALIDATION_ERROR' })
   })
 
   it('rejects a non-array column_order', async () => {

@@ -1,18 +1,19 @@
 import { withAuth } from '../../lib/auth.js'
 import { withAudit } from '../../lib/audit.js'
 import { query } from '../../lib/db.js'
+import { sendError } from '../../lib/errors.js'
 
 async function handleUpdate(req, res, user) {
   if (req.method !== 'PATCH') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return sendError(res, 405, 'Method not allowed')
   }
   if (user.role !== 'admin') {
-    return res.status(403).json({ error: 'Forbidden' })
+    return sendError(res, 403, 'Forbidden')
   }
 
   const { role } = req.body ?? {}
   if (role !== 'admin' && role !== 'member') {
-    return res.status(400).json({ error: 'role must be "admin" or "member"' })
+    return sendError(res, 400, 'role must be "admin" or "member"')
   }
 
   const { rows } = await query(
@@ -20,7 +21,7 @@ async function handleUpdate(req, res, user) {
     [role, req.query.id],
   )
   if (rows.length === 0) {
-    return res.status(404).json({ error: 'User not found' })
+    return sendError(res, 404, 'User not found')
   }
   res.status(200).json(rows[0])
 }

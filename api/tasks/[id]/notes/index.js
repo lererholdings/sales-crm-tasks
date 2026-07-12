@@ -1,7 +1,8 @@
 import { withAuth } from '../../../../lib/auth.js'
 import { withAudit } from '../../../../lib/audit.js'
 import { query } from '../../../../lib/db.js'
-import { NOTE_AUDIT_FIELDS, NOTE_BASE_SELECT, getNotesPreviewCount, toNote } from '../../../../lib/notes.js'
+import { MAX_NOTE_LENGTH, NOTE_AUDIT_FIELDS, NOTE_BASE_SELECT, getNotesPreviewCount, toNote } from '../../../../lib/notes.js'
+import { sendError } from '../../../../lib/errors.js'
 
 async function findTask(taskId) {
   const { rows } = await query('SELECT id, deleted_at FROM tasks WHERE id = $1', [taskId])
@@ -12,12 +13,12 @@ async function handleList(req, res, user) {
   const { id: taskId } = req.query
   const includeDeleted = req.query.include_deleted === 'true'
   if (includeDeleted && user.role !== 'admin') {
-    return res.status(403).json({ error: 'Forbidden' })
+    return sendError(res, 403, 'Forbidden')
   }
 
   const task = await findTask(taskId)
-  if (!task) return res.status(404).json({ error: 'Task not found' })
-  if (task.deleted_at && !includeDeleted) return res.status(404).json({ error: 'Task not found' })
+  if (!task) return sendError(res, 404, 'Task not found')
+  if (task.deleted_at && !includeDeleted) return sendError(res, 404, 'Task not found')
 
   const deletedFilter = includeDeleted ? '' : 'AND n.deleted_at IS NULL'
   const { rows: countRows } = await query(
@@ -47,10 +48,15 @@ async function handleList(req, res, user) {
 async function handleCreate(req, res, user) {
   const { id: taskId } = req.query
   const { content } = req.body ?? {}
-  if (!content) return res.status(400).json({ error: 'content is required' })
+  if (!content || typeof content !== 'string' || !content.trim()) {
+    return sendError(res, 400, 'content is required')
+  }
+  if (content.length > MAX_NOTE_LENGTH) {
+    return sendError(res, 400, `content must be ${MAX_NOTE_LENGTH} characters or fewer`)
+  }
 
   const task = await findTask(taskId)
-  if (!task || task.deleted_at) return res.status(404).json({ error: 'Task not found' })
+  if (!task || task.deleted_at) return sendError(res, 404, 'Task not found')
 
   const { rows } = await query(
     'INSERT INTO task_notes (task_id, user_id, content) VALUES ($1, $2, $3) RETURNING id',
@@ -73,5 +79,5 @@ const auditedCreate = withAudit(
 export default withAuth(async (req, res, user) => {
   if (req.method === 'GET') return handleList(req, res, user)
   if (req.method === 'POST') return auditedCreate(req, res, user)
-  return res.status(405).json({ error: 'Method not allowed' })
+  return sendError(res, 405, 'Method not allowed')
 })

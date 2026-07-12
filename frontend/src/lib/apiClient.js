@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { useAuth } from '@clerk/clerk-react'
+import { dispatchSessionExpired } from './sessionEvents.js'
 
-async function request(getToken, method, path, body) {
-  const token = await getToken()
-  const res = await fetch(`/api${path}`, {
+async function doFetch(token, method, path, body) {
+  return fetch(`/api${path}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
@@ -11,6 +11,29 @@ async function request(getToken, method, path, body) {
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
+}
+
+async function request(getToken, method, path, body) {
+  const token = await getToken()
+  let res = await doFetch(token, method, path, body)
+
+  if (res.status === 401) {
+    // The cached token might just be stale — Clerk refreshes it in the
+    // background, but a request can race that. Force a fresh one and retry
+    // exactly once before treating this as a real session expiry.
+    const freshToken = await getToken({ skipCache: true })
+    res = await doFetch(freshToken, method, path, body)
+  }
+
+  if (res.status === 401) {
+    // Still unauthorized after a forced refresh: the session is genuinely
+    // gone (expired/revoked), not just a stale cache. Send the user to sign
+    // back in rather than showing a raw error for a broken session.
+    dispatchSessionExpired()
+    const error = new Error('Session expired')
+    error.status = 401
+    throw error
+  }
 
   let data = null
   try {

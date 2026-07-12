@@ -78,6 +78,7 @@ describe('PATCH /api/users/:id', () => {
     await handler(authedReq(), res)
 
     expect(res.statusCode).toBe(403)
+    expect(res.body).toEqual({ error: 'Forbidden', code: 'FORBIDDEN' })
     expect(queryMock.mock.calls.some(([sql]) => sql.startsWith('UPDATE users'))).toBe(false)
   })
 

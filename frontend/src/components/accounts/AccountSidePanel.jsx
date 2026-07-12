@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useCurrentUser } from '../../hooks/useCurrentUser.js'
 import { useApiClient } from '../../lib/apiClient.js'
+import { isSafeUrl } from '../../lib/safeUrl.js'
 import ConfirmDialog from '../ui/ConfirmDialog.jsx'
 import SidePanel from '../ui/SidePanel.jsx'
 
@@ -15,6 +16,7 @@ export default function AccountSidePanel({ accountId, onClose, onUpdated }) {
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
   const [archiving, setArchiving] = useState(false)
   const [archiveError, setArchiveError] = useState(null)
+  const [submitAttempted, setSubmitAttempted] = useState(false)
 
   useEffect(() => {
     if (!accountId) return undefined
@@ -45,6 +47,10 @@ export default function AccountSidePanel({ accountId, onClose, onUpdated }) {
   }, [accountId, apiClient])
 
   const handleSave = async () => {
+    if (!form.name.trim() || !form.country.trim()) {
+      setSubmitAttempted(true)
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -106,6 +112,9 @@ export default function AccountSidePanel({ accountId, onClose, onUpdated }) {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
+            {submitAttempted && !form.name.trim() && (
+              <span className="mt-1 block text-[11px] text-urgent">Name is required.</span>
+            )}
           </label>
           <label className="text-[12px] text-text-secondary">
             Country
@@ -114,6 +123,9 @@ export default function AccountSidePanel({ accountId, onClose, onUpdated }) {
               value={form.country}
               onChange={(e) => setForm({ ...form, country: e.target.value })}
             />
+            {submitAttempted && !form.country.trim() && (
+              <span className="mt-1 block text-[11px] text-urgent">Country is required.</span>
+            )}
           </label>
           <label className="text-[12px] text-text-secondary">
             ACV
@@ -133,7 +145,7 @@ export default function AccountSidePanel({ accountId, onClose, onUpdated }) {
             />
           </label>
 
-          {account?.sfdc_account_url && (
+          {isSafeUrl(account?.sfdc_account_url) && (
             <a
               href={account.sfdc_account_url}
               target="_blank"

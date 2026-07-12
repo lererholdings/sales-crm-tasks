@@ -4,11 +4,14 @@ import { query } from '../../lib/db.js'
 import {
   TASK_AUDIT_FIELDS,
   TASK_BASE_SELECT,
+  TASK_TEXT_FIELD_RULES,
   VALID_PRIORITIES,
   VALID_STATUSES,
   attachNotes,
   toTask,
 } from '../../lib/tasks.js'
+import { sendError } from '../../lib/errors.js'
+import { validateTextFields } from '../../lib/validation.js'
 
 // Allowlisted so sort_by (a raw query param) can never be interpolated
 // directly into SQL — anything not in this map falls back to the default.
@@ -27,7 +30,7 @@ async function handleGet(req, res, user) {
   const q = req.query
   const includeDeleted = q.include_deleted === 'true'
   if (includeDeleted && user.role !== 'admin') {
-    return res.status(403).json({ error: 'Forbidden' })
+    return sendError(res, 403, 'Forbidden')
   }
 
   const conditions = []
@@ -46,7 +49,7 @@ async function handleGet(req, res, user) {
   if (q.status) {
     const statuses = q.status.split(',').filter(Boolean)
     if (statuses.length === 0 || statuses.some((s) => !VALID_STATUSES.includes(s))) {
-      return res.status(400).json({ error: 'Invalid status' })
+      return sendError(res, 400, 'Invalid status')
     }
     const placeholders = statuses.map((s) => {
       params.push(s)
@@ -57,7 +60,7 @@ async function handleGet(req, res, user) {
   if (q.priority) {
     const priorities = q.priority.split(',').filter(Boolean)
     if (priorities.length === 0 || priorities.some((p) => !VALID_PRIORITIES.includes(p))) {
-      return res.status(400).json({ error: 'Invalid priority' })
+      return sendError(res, 400, 'Invalid priority')
     }
     const placeholders = priorities.map((p) => {
       params.push(p)
@@ -97,17 +100,19 @@ async function handleCreate(req, res, user) {
   const body = req.body ?? {}
   const { task_name: taskName, assignee_id: assigneeId, task_type_id: taskTypeId } = body
 
-  if (!taskName || !assigneeId || !taskTypeId) {
-    return res.status(400).json({ error: 'task_name, assignee_id, and task_type_id are required' })
+  const textFieldError = validateTextFields(body, TASK_TEXT_FIELD_RULES)
+  if (textFieldError) return sendError(res, 400, textFieldError)
+  if (!taskName || typeof taskName !== 'string' || !taskName.trim() || !assigneeId || !taskTypeId) {
+    return sendError(res, 400, 'task_name, assignee_id, and task_type_id are required')
   }
 
   const { rows: assigneeRows } = await query('SELECT id FROM users WHERE id = $1', [assigneeId])
-  if (assigneeRows.length === 0) return res.status(400).json({ error: 'assignee_id does not exist' })
+  if (assigneeRows.length === 0) return sendError(res, 400, 'assignee_id does not exist')
 
   const { rows: taskTypeRows } = await query('SELECT id FROM task_types WHERE id = $1 AND active = true', [
     taskTypeId,
   ])
-  if (taskTypeRows.length === 0) return res.status(400).json({ error: 'task_type_id does not exist or is inactive' })
+  if (taskTypeRows.length === 0) return sendError(res, 400, 'task_type_id does not exist or is inactive')
 
   const { rows } = await query(
     `INSERT INTO tasks (
@@ -143,5 +148,5 @@ const auditedCreate = withAudit({ table: 'tasks', entityType: 'task', fields: TA
 export default withAuth(async (req, res, user) => {
   if (req.method === 'GET') return handleGet(req, res, user)
   if (req.method === 'POST') return auditedCreate(req, res, user)
-  return res.status(405).json({ error: 'Method not allowed' })
+  return sendError(res, 405, 'Method not allowed')
 })

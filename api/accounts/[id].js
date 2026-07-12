@@ -1,6 +1,9 @@
 import { withAuth } from '../../lib/auth.js'
 import { query } from '../../lib/db.js'
 import { logFieldChanges } from '../../lib/audit.js'
+import { sendError } from '../../lib/errors.js'
+import { ACCOUNT_TEXT_FIELD_RULES } from '../../lib/accounts.js'
+import { validateTextFields } from '../../lib/validation.js'
 
 function toAccount(row) {
   return {
@@ -31,7 +34,7 @@ export default withAuth(async (req, res, user) => {
        WHERE a.id = $1`,
       [id],
     )
-    if (rows.length === 0) return res.status(404).json({ error: 'Account not found' })
+    if (rows.length === 0) return sendError(res, 404, 'Account not found')
     return res.status(200).json(toAccount(rows[0]))
   }
 
@@ -39,11 +42,20 @@ export default withAuth(async (req, res, user) => {
     const body = req.body ?? {}
     const fieldsToUpdate = PATCHABLE_FIELDS.filter((field) => field in body)
     if (fieldsToUpdate.length === 0) {
-      return res.status(400).json({ error: 'No updatable fields provided' })
+      return sendError(res, 400, 'No updatable fields provided')
+    }
+
+    const textFieldError = validateTextFields(body, ACCOUNT_TEXT_FIELD_RULES)
+    if (textFieldError) return sendError(res, 400, textFieldError)
+    if ('name' in body && (typeof body.name !== 'string' || !body.name.trim())) {
+      return sendError(res, 400, 'name cannot be empty')
+    }
+    if ('country' in body && (typeof body.country !== 'string' || !body.country.trim())) {
+      return sendError(res, 400, 'country cannot be empty')
     }
 
     const { rows: currentRows } = await query('SELECT * FROM accounts WHERE id = $1', [id])
-    if (currentRows.length === 0) return res.status(404).json({ error: 'Account not found' })
+    if (currentRows.length === 0) return sendError(res, 404, 'Account not found')
     const current = currentRows[0]
 
     // ACV comes back from pg as a string (NUMERIC) — normalize before diffing
@@ -79,19 +91,19 @@ export default withAuth(async (req, res, user) => {
   // last, greyed out) rather than being hidden by default.
   if (req.method === 'DELETE') {
     if (user.role !== 'admin') {
-      return res.status(403).json({ error: 'Only admins can archive an account' })
+      return sendError(res, 403, 'Only admins can archive an account')
     }
 
     const { rows: existing } = await query('SELECT id, deleted_at FROM accounts WHERE id = $1', [id])
-    if (existing.length === 0) return res.status(404).json({ error: 'Account not found' })
-    if (existing[0].deleted_at) return res.status(400).json({ error: 'Account is already archived' })
+    if (existing.length === 0) return sendError(res, 404, 'Account not found')
+    if (existing[0].deleted_at) return sendError(res, 400, 'Account is already archived')
 
     const { rows: activeTasks } = await query(
       "SELECT id FROM tasks WHERE account_id = $1 AND deleted_at IS NULL AND status != 'done' LIMIT 1",
       [id],
     )
     if (activeTasks.length > 0) {
-      return res.status(409).json({ error: 'Cannot archive an account with active tasks' })
+      return sendError(res, 409, 'Cannot archive an account with active tasks')
     }
 
     const { rows } = await query(
@@ -116,5 +128,5 @@ export default withAuth(async (req, res, user) => {
       .json(toAccount({ ...archived, updated_by_id: user.id, updated_by_name: user.displayName }))
   }
 
-  return res.status(405).json({ error: 'Method not allowed' })
+  return sendError(res, 405, 'Method not allowed')
 })

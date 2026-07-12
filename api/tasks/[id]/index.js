@@ -1,7 +1,9 @@
 import { withAuth } from '../../../lib/auth.js'
 import { withAudit, logFieldChanges } from '../../../lib/audit.js'
 import { query } from '../../../lib/db.js'
-import { TASK_AUDIT_FIELDS, TASK_BASE_SELECT, toTask } from '../../../lib/tasks.js'
+import { TASK_AUDIT_FIELDS, TASK_BASE_SELECT, TASK_TEXT_FIELD_RULES, toTask } from '../../../lib/tasks.js'
+import { sendError } from '../../../lib/errors.js'
+import { validateTextFields } from '../../../lib/validation.js'
 
 async function fetchPaginatedNotes(taskId, limit, offset) {
   const { rows } = await query(
@@ -33,12 +35,12 @@ async function handleGet(req, res, user) {
   const { id } = req.query
   const includeDeleted = req.query.include_deleted === 'true'
   if (includeDeleted && user.role !== 'admin') {
-    return res.status(403).json({ error: 'Forbidden' })
+    return sendError(res, 403, 'Forbidden')
   }
 
   const { rows } = await query(`${TASK_BASE_SELECT} WHERE t.id = $1`, [id])
-  if (rows.length === 0) return res.status(404).json({ error: 'Task not found' })
-  if (rows[0].deleted_at && !includeDeleted) return res.status(404).json({ error: 'Task not found' })
+  if (rows.length === 0) return sendError(res, 404, 'Task not found')
+  if (rows[0].deleted_at && !includeDeleted) return sendError(res, 404, 'Task not found')
 
   const notesLimit = Number.parseInt(req.query.notes_limit, 10) || 25
   const notesOffset = Number.parseInt(req.query.notes_offset, 10) || 0
@@ -53,11 +55,17 @@ async function handleUpdate(req, res, user) {
   const fieldsToUpdate = TASK_AUDIT_FIELDS.filter((field) => field in body)
 
   if (fieldsToUpdate.length === 0) {
-    return res.status(400).json({ error: 'No updatable fields provided' })
+    return sendError(res, 400, 'No updatable fields provided')
+  }
+
+  const textFieldError = validateTextFields(body, TASK_TEXT_FIELD_RULES)
+  if (textFieldError) return sendError(res, 400, textFieldError)
+  if ('task_name' in body && !body.task_name.trim()) {
+    return sendError(res, 400, 'task_name cannot be empty')
   }
 
   const { rows: existing } = await query('SELECT id FROM tasks WHERE id = $1', [id])
-  if (existing.length === 0) return res.status(404).json({ error: 'Task not found' })
+  if (existing.length === 0) return sendError(res, 404, 'Task not found')
 
   const setClauses = fieldsToUpdate.map((field, i) => `${field} = $${i + 2}`)
   const values = fieldsToUpdate.map((field) => body[field])
@@ -75,7 +83,7 @@ async function handleDelete(req, res, user) {
   const { id } = req.query
 
   const { rows: existing } = await query('SELECT id FROM tasks WHERE id = $1 AND deleted_at IS NULL', [id])
-  if (existing.length === 0) return res.status(404).json({ error: 'Task not found' })
+  if (existing.length === 0) return sendError(res, 404, 'Task not found')
 
   await query('UPDATE tasks SET deleted_at = now(), deleted_by = $2 WHERE id = $1', [id, user.id])
 
@@ -121,5 +129,5 @@ export default withAuth(async (req, res, user) => {
   if (req.method === 'GET') return handleGet(req, res, user)
   if (req.method === 'PATCH') return auditedUpdate(req, res, user)
   if (req.method === 'DELETE') return auditedDelete(req, res, user)
-  return res.status(405).json({ error: 'Method not allowed' })
+  return sendError(res, 405, 'Method not allowed')
 })

@@ -149,6 +149,40 @@ describe('POST /api/accounts', () => {
     await handler(authedReq({ method: 'POST', body: { name: 'Acme' } }), res)
 
     expect(res.statusCode).toBe(400)
+    expect(res.body).toEqual({ error: 'name and country are required', code: 'VALIDATION_ERROR' })
+  })
+
+  it('rejects a name over the length limit', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'POST', body: { name: 'a'.repeat(301), country: 'AU' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a country over the length limit', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'POST', body: { name: 'Acme', country: 'a'.repeat(101) } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a non-http(s) sfdc_account_url', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(
+      authedReq({
+        method: 'POST',
+        body: { name: 'Acme', country: 'AU', sfdc_account_url: 'javascript:alert(1)' },
+      }),
+      res,
+    )
+
+    expect(res.statusCode).toBe(400)
   })
 
   it('creates an account and returns it with acv', async () => {

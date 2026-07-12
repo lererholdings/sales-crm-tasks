@@ -5,6 +5,7 @@ import { useTasks } from '../hooks/useTasks.js'
 import { useApiClient } from '../lib/apiClient.js'
 import { TASK_STATUSES } from '../lib/constants.js'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
+import LinkToAccountModal from '../components/tasks/LinkToAccountModal.jsx'
 import NewTaskModal from '../components/tasks/NewTaskModal.jsx'
 import TaskSidePanel from '../components/tasks/TaskSidePanel.jsx'
 import TaskTable from '../components/tasks/TaskTable.jsx'
@@ -28,6 +29,7 @@ export default function TasksPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedTaskId, setSelectedTaskId] = useState(() => searchParams.get('taskId'))
   const [taskPendingDelete, setTaskPendingDelete] = useState(null)
+  const [taskPendingLink, setTaskPendingLink] = useState(null)
 
   const handleSort = useCallback((sortKey) => {
     setFilters((prev) => ({
@@ -69,10 +71,16 @@ export default function TasksPage() {
     await refresh()
   }
 
+  const handleLinkToAccount = async (accountId) => {
+    const updated = await apiClient.patch(`/tasks/${taskPendingLink.id}`, { account_id: accountId })
+    updateTaskInPlace(updated.id, updated)
+  }
+
   // Stable references so TaskRow's React.memo can actually skip re-rendering
   // rows whose own task object didn't change (see hooks/useTasks.js).
   const handleOpen = useCallback((task) => setSelectedTaskId(task.id), [])
   const handleDeleteRequest = useCallback((task) => setTaskPendingDelete(task), [])
+  const handleLinkToAccountRequest = useCallback((task) => setTaskPendingLink(task), [])
   const handleClosePanel = useCallback(() => {
     setSelectedTaskId(null)
     if (searchParams.has('taskId')) {
@@ -109,6 +117,7 @@ export default function TasksPage() {
             onOpen={handleOpen}
             onDuplicate={handleDuplicate}
             onDeleteRequest={handleDeleteRequest}
+            onLinkToAccount={handleLinkToAccountRequest}
             columnOrder={preferences.column_order}
             columnVisibility={preferences.column_visibility}
             sortBy={filters.sort_by}
@@ -120,6 +129,14 @@ export default function TasksPage() {
 
       {showNewModal && (
         <NewTaskModal tasks={tasks} onClose={() => setShowNewModal(false)} onCreate={handleCreate} />
+      )}
+
+      {taskPendingLink && (
+        <LinkToAccountModal
+          task={taskPendingLink}
+          onClose={() => setTaskPendingLink(null)}
+          onLink={handleLinkToAccount}
+        />
       )}
 
       <TaskSidePanel

@@ -96,6 +96,7 @@ describe('GET /api/tasks/:id/notes', () => {
     await handler(authedReq(), res)
 
     expect(res.statusCode).toBe(404)
+    expect(res.body).toEqual({ error: 'Task not found', code: 'NOT_FOUND' })
   })
 
   it('hides notes for a soft-deleted task from a non-admin (404)', async () => {
@@ -195,6 +196,24 @@ describe('POST /api/tasks/:id/notes', () => {
     await handler(authedReq({ method: 'POST', body: { content: 'hi' } }), res)
 
     expect(res.statusCode).toBe(404)
+  })
+
+  it('400s for whitespace-only content', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'POST', body: { content: '   ' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('400s for content over the length limit', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'POST', body: { content: 'a'.repeat(10001) } }), res)
+
+    expect(res.statusCode).toBe(400)
   })
 
   it('creates the note and logs a created audit entry', async () => {

@@ -116,6 +116,7 @@ describe('POST /api/task-types', () => {
     await handler(authedReq({ method: 'POST', body: { category: 'pre-sale', name: 'Workshop' } }), res)
 
     expect(res.statusCode).toBe(403)
+    expect(res.body).toEqual({ error: 'Forbidden', code: 'FORBIDDEN' })
   })
 
   it('rejects an invalid category', async () => {
@@ -132,6 +133,24 @@ describe('POST /api/task-types', () => {
 
     const res = mockRes()
     await handler(authedReq({ method: 'POST', body: { category: 'pre-sale' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a whitespace-only name', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'POST', body: { category: 'pre-sale', name: '   ' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a name over the length limit', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'POST', body: { category: 'pre-sale', name: 'a'.repeat(101) } }), res)
 
     expect(res.statusCode).toBe(400)
   })
@@ -189,6 +208,15 @@ describe('PATCH /api/task-types', () => {
 
     const res = mockRes()
     await handler(authedReq({ method: 'PATCH', query: { id: 't1' }, body: { active: 'yes' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a name over the length limit on update', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', query: { id: 't1' }, body: { name: 'a'.repeat(101) } }), res)
 
     expect(res.statusCode).toBe(400)
   })

@@ -7,10 +7,14 @@ export default function NewAccountModal({ onClose, onCreate }) {
   const [sfdcUrl, setSfdcUrl] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [submitAttempted, setSubmitAttempted] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!name || !country) return
+    if (!name || !country) {
+      setSubmitAttempted(true)
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
@@ -39,8 +43,8 @@ export default function NewAccountModal({ onClose, onCreate }) {
             className="mt-1 w-full rounded-lg border border-border bg-bg-input px-3 py-1.5 text-[13px] text-text-primary"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            required
           />
+          {submitAttempted && !name && <span className="mt-1 block text-[11px] text-urgent">Name is required.</span>}
         </label>
 
         <label className="mb-3 block text-[12px] text-text-secondary">
@@ -49,8 +53,10 @@ export default function NewAccountModal({ onClose, onCreate }) {
             className="mt-1 w-full rounded-lg border border-border bg-bg-input px-3 py-1.5 text-[13px] text-text-primary"
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            required
           />
+          {submitAttempted && !country && (
+            <span className="mt-1 block text-[11px] text-urgent">Country is required.</span>
+          )}
         </label>
 
         <label className="mb-3 block text-[12px] text-text-secondary">

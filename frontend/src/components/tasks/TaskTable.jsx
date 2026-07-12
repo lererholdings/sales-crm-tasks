@@ -26,6 +26,7 @@ export default function TaskTable({
   onOpen,
   onDuplicate,
   onDeleteRequest,
+  onLinkToAccount,
   columnOrder = DEFAULT_COLUMN_ORDER,
   columnVisibility = {},
   sortBy = null,
@@ -95,6 +96,7 @@ export default function TaskTable({
                     onOpen={onOpen}
                     onDuplicate={onDuplicate}
                     onDeleteRequest={onDeleteRequest}
+                    onLinkToAccount={onLinkToAccount}
                   />
                 ))}
             </Fragment>

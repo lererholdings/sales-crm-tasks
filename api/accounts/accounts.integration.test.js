@@ -189,6 +189,7 @@ describe.skipIf(!hasEnv)('account archive integration (real dev DB)', () => {
     await singleHandler(bypassReqAs(memberClerkId, { method: 'DELETE', query: { id: accountId } }), res)
 
     expect(res.statusCode).toBe(403)
+    expect(res.body.code).toBe('FORBIDDEN')
   })
 
   it('409s when the account has an active (non-done) task', async () => {
@@ -199,6 +200,7 @@ describe.skipIf(!hasEnv)('account archive integration (real dev DB)', () => {
     await singleHandler(bypassReqAs(adminClerkId, { method: 'DELETE', query: { id: accountId } }), res)
 
     expect(res.statusCode).toBe(409)
+    expect(res.body.code).toBe('CONFLICT')
   })
 
   it('archives when all tasks are done, writes an audit_log "deleted" entry, and still appears in the list', async () => {

@@ -155,6 +155,15 @@ describe('AdminPage', () => {
     await waitFor(() => expect(screen.getByDisplayValue('member')).toBeTruthy())
   })
 
+  it('shows an error message instead of redirecting when the current-user lookup fails', async () => {
+    global.fetch = vi.fn(() => Promise.resolve({ ok: false, json: async () => ({ error: 'Internal error' }) }))
+
+    renderAtAdmin()
+
+    await waitFor(() => expect(screen.getByText('Failed to load your account. Please refresh.')).toBeTruthy())
+    expect(screen.queryByText('Tasks page')).toBeFalsy()
+  })
+
   it('falls back to Task Types for an unrecognized ?tab= value', async () => {
     mockFetchByUrl({
       '/api/users?me=true': { id: 'u1', display_name: 'Admin', email: 'a@x.com', role: 'admin' },

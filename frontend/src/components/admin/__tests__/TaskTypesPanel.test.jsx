@@ -76,6 +76,19 @@ describe('TaskTypesPanel', () => {
     expect(listCallsAfter).toBe(listCallsBefore) // no refetch triggered
   })
 
+  it('shows an inline validation error when submitting the new task type form with an empty name', async () => {
+    mockFetchByUrl({ '/api/task-types': [TASK_TYPE] })
+
+    render(<TaskTypesPanel />)
+    await waitFor(() => expect(screen.getByText('Demo')).toBeTruthy())
+
+    fireEvent.click(screen.getByText('Add'))
+
+    expect(screen.getByText('Name is required.')).toBeTruthy()
+    const createCall = global.fetch.mock.calls.find(([, opts]) => opts?.method === 'POST')
+    expect(createCall).toBeUndefined()
+  })
+
   it('renames a task type inline, updating it in place without refetching the list', async () => {
     mockFetchByUrl({
       '/api/task-types': (url, opts) =>

@@ -8,9 +8,13 @@ export default function NoteItem({ note, canEdit, onEdit }) {
   const [content, setContent] = useState(note.content)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [submitAttempted, setSubmitAttempted] = useState(false)
 
   const handleSave = async () => {
-    if (!content.trim()) return
+    if (!content.trim()) {
+      setSubmitAttempted(true)
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -47,6 +51,9 @@ export default function NoteItem({ note, canEdit, onEdit }) {
       {editing ? (
         <div>
           <MarkdownEditor value={content} onChange={setContent} rows={2} />
+          {submitAttempted && !content.trim() && (
+            <p className="mt-1 text-[11px] text-urgent">Note content is required.</p>
+          )}
           {error && <p className="mt-1 text-[12px] text-urgent">{error}</p>}
           <div className="mt-1.5 flex gap-2">
             <button

@@ -57,6 +57,7 @@ describe('GET /api/users', () => {
     await handler({ method: 'GET', headers: {} }, res)
 
     expect(res.statusCode).toBe(401)
+    expect(res.body).toEqual({ error: 'Missing bearer token', code: 'UNAUTHORIZED' })
   })
 
   it('?me=true returns only the caller, without listing everyone', async () => {

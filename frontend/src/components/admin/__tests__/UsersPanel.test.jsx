@@ -87,4 +87,21 @@ describe('UsersPanel', () => {
     ).length
     expect(listCallsAfter).toBe(listCallsBefore) // no refetch triggered
   })
+
+  it('shows an error message when the role change fails, instead of failing silently', async () => {
+    global.fetch = vi.fn((url, opts) => {
+      if (url === '/api/users?me=true') return Promise.resolve(jsonResponse(ME))
+      if (opts?.method === 'PATCH') return Promise.resolve({ ok: false, json: async () => ({ error: 'Server error' }) })
+      if (url === '/api/users') return Promise.resolve(jsonResponse([ME, OTHER]))
+      return Promise.resolve(jsonResponse([]))
+    })
+
+    render(<UsersPanel />)
+    await waitFor(() => expect(screen.getByText('Sara')).toBeTruthy())
+
+    const otherRow = screen.getByText('Sara').closest('tr')
+    fireEvent.change(within(otherRow).getByDisplayValue('member'), { target: { value: 'admin' } })
+
+    expect(await screen.findByText('Server error')).toBeTruthy()
+  })
 })

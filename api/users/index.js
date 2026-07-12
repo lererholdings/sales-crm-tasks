@@ -1,9 +1,10 @@
 import { withAuth } from '../../lib/auth.js'
 import { query } from '../../lib/db.js'
+import { sendError } from '../../lib/errors.js'
 
 export default withAuth(async (req, res, user) => {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return sendError(res, 405, 'Method not allowed')
   }
 
   // Cheap "who am I" lookup — withAuth already resolved this from the JWT,

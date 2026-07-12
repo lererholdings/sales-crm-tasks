@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import ContextMenu, { ContextMenuDivider, ContextMenuItem } from '../ui/ContextMenu.jsx'
 
-export default function TaskNameCell({ task, onOpen, onDuplicate, onDeleteRequest }) {
+export default function TaskNameCell({ task, onOpen, onDuplicate, onDeleteRequest, onLinkToAccount }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const isPartnerOnly = !task.account
 
@@ -36,7 +36,7 @@ export default function TaskNameCell({ task, onOpen, onDuplicate, onDeleteReques
       <ContextMenu open={menuOpen} onClose={() => setMenuOpen(false)}>
         {isPartnerOnly && (
           <>
-            <ContextMenuItem icon="ti-link" label="Link to account" accent onClick={closeAnd(onOpen)} />
+            <ContextMenuItem icon="ti-link" label="Link to account" accent onClick={closeAnd(onLinkToAccount)} />
             <ContextMenuDivider />
           </>
         )}

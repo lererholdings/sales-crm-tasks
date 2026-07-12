@@ -1,5 +1,6 @@
 import { withAuth } from '../../lib/auth.js'
 import { query } from '../../lib/db.js'
+import { sendError } from '../../lib/errors.js'
 
 const VALID_ENTITY_TYPES = ['task', 'account', 'task_note', 'task_type', 'user']
 const VALID_ACTIONS = ['created', 'updated', 'deleted', 'viewed']
@@ -64,7 +65,7 @@ function toEntry(row) {
 
 export default withAuth(async (req, res, user) => {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return sendError(res, 405, 'Method not allowed')
   }
 
   const q = req.query
@@ -73,7 +74,7 @@ export default withAuth(async (req, res, user) => {
   // task's own history," which the task's own page already exposes to
   // whoever can see the task, not a broader audit surface.
   if (user.role !== 'admin' && !q.task_id) {
-    return res.status(403).json({ error: 'Forbidden' })
+    return sendError(res, 403, 'Forbidden')
   }
 
   const conditions = []
@@ -88,12 +89,12 @@ export default withAuth(async (req, res, user) => {
     conditions.push(`a.user_id = $${filterParams.length}`)
   }
   if (q.entity_type) {
-    if (!VALID_ENTITY_TYPES.includes(q.entity_type)) return res.status(400).json({ error: 'Invalid entity_type' })
+    if (!VALID_ENTITY_TYPES.includes(q.entity_type)) return sendError(res, 400, 'Invalid entity_type')
     filterParams.push(q.entity_type)
     conditions.push(`a.entity_type = $${filterParams.length}`)
   }
   if (q.action) {
-    if (!VALID_ACTIONS.includes(q.action)) return res.status(400).json({ error: 'Invalid action' })
+    if (!VALID_ACTIONS.includes(q.action)) return sendError(res, 400, 'Invalid action')
     filterParams.push(q.action)
     conditions.push(`a.action = $${filterParams.length}`)
   }

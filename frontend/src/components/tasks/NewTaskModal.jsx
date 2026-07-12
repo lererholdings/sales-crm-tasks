@@ -36,6 +36,7 @@ export default function NewTaskModal({ tasks, onClose, onCreate }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [submitAttempted, setSubmitAttempted] = useState(false)
 
   const accountOptions = accounts.map((a) => ({ value: a.id, label: a.name, archived: Boolean(a.deleted_at) }))
   // Deactivated subtypes shouldn't be offered for a brand-new task — see
@@ -64,7 +65,10 @@ export default function NewTaskModal({ tasks, onClose, onCreate }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!canSubmit) return
+    if (!canSubmit) {
+      setSubmitAttempted(true)
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
@@ -102,8 +106,10 @@ export default function NewTaskModal({ tasks, onClose, onCreate }) {
             className="mt-1 w-full rounded-lg border border-border bg-bg-input px-3 py-1.5 text-[13px] text-text-primary"
             value={form.task_name}
             onChange={(e) => setForm({ ...form, task_name: e.target.value })}
-            required
           />
+          {submitAttempted && !form.task_name.trim() && (
+            <span className="mt-1 block text-[11px] text-urgent">Task name is required.</span>
+          )}
         </label>
 
         <div className="mb-3">
@@ -142,6 +148,9 @@ export default function NewTaskModal({ tasks, onClose, onCreate }) {
             onChange={(v) => setForm({ ...form, task_type_id: v })}
             placeholder="Select type…"
           />
+          {submitAttempted && !form.task_type_id && (
+            <span className="mt-1 block text-[11px] text-urgent">Type is required.</span>
+          )}
         </div>
 
         <div className="mb-3">
@@ -152,6 +161,9 @@ export default function NewTaskModal({ tasks, onClose, onCreate }) {
             onChange={(v) => setForm({ ...form, assignee_id: v })}
             placeholder="Select assignee…"
           />
+          {submitAttempted && !form.assignee_id && (
+            <span className="mt-1 block text-[11px] text-urgent">Assignee is required.</span>
+          )}
         </div>
 
         <label className="mb-3 block text-[12px] text-text-secondary">
@@ -204,7 +216,7 @@ export default function NewTaskModal({ tasks, onClose, onCreate }) {
           </button>
           <button
             type="submit"
-            disabled={submitting || !canSubmit}
+            disabled={submitting}
             className="rounded-lg bg-accent-strong px-3 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
           >
             {submitting ? 'Creating…' : 'Create'}

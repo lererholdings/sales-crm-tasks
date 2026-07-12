@@ -77,6 +77,18 @@ describe('TaskSidePanel', () => {
     expect(screen.getByText('RFP response')).toBeTruthy()
   })
 
+  it('shows an error message instead of a stuck blank panel when the task fails to load', async () => {
+    global.fetch = vi.fn((url) => {
+      if (url.startsWith('/api/tasks/t1')) return Promise.resolve({ ok: false, json: async () => ({ error: 'Not found' }) })
+      if (url.startsWith('/api/audit-log')) return Promise.resolve(jsonResponse({ entries: [], total: 0 }))
+      return Promise.resolve(jsonResponse([]))
+    })
+
+    render(<TaskSidePanel taskId="t1" onClose={vi.fn()} onUpdated={vi.fn()} />)
+
+    expect(await screen.findByText('Failed to load task.')).toBeTruthy()
+  })
+
   it('shows an Edit affordance on the current user\'s own latest note', async () => {
     mockFetchByUrl({ '/api/tasks/t1?notes_limit': TASK_DETAIL, '/api/users?me=true': CURRENT_USER })
 
