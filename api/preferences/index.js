@@ -1,5 +1,6 @@
 import { withAuth } from '../../lib/auth.js'
 import { query } from '../../lib/db.js'
+import { sendError } from '../../lib/errors.js'
 
 const VALID_THEMES = ['light', 'dark']
 
@@ -29,23 +30,23 @@ async function handlePatch(req, res, user) {
   const body = req.body ?? {}
   const provided = PATCHABLE_FIELDS.filter((field) => field in body)
   if (provided.length === 0) {
-    return res.status(400).json({ error: 'No updatable fields provided' })
+    return sendError(res, 400, 'No updatable fields provided')
   }
   for (const field of JSON_ARRAY_FIELDS) {
     if (field in body && !Array.isArray(body[field])) {
-      return res.status(400).json({ error: `${field} must be an array` })
+      return sendError(res, 400, `${field} must be an array`)
     }
   }
   for (const field of JSON_OBJECT_FIELDS) {
     if (field in body && (typeof body[field] !== 'object' || body[field] === null || Array.isArray(body[field]))) {
-      return res.status(400).json({ error: `${field} must be an object` })
+      return sendError(res, 400, `${field} must be an object`)
     }
   }
   if ('notes_preview_count' in body && !Number.isInteger(body.notes_preview_count)) {
-    return res.status(400).json({ error: 'notes_preview_count must be an integer' })
+    return sendError(res, 400, 'notes_preview_count must be an integer')
   }
   if ('theme' in body && !VALID_THEMES.includes(body.theme)) {
-    return res.status(400).json({ error: `theme must be one of: ${VALID_THEMES.join(', ')}` })
+    return sendError(res, 400, `theme must be one of: ${VALID_THEMES.join(', ')}`)
   }
 
   // Upsert: a user_preferences row may not exist yet (nothing creates one at
@@ -88,5 +89,5 @@ async function handlePatch(req, res, user) {
 export default withAuth(async (req, res, user) => {
   if (req.method === 'GET') return handleGet(req, res, user)
   if (req.method === 'PATCH') return handlePatch(req, res, user)
-  return res.status(405).json({ error: 'Method not allowed' })
+  return sendError(res, 405, 'Method not allowed')
 })
