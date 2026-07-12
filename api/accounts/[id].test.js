@@ -72,6 +72,7 @@ describe('GET /api/accounts/:id', () => {
     await handler(authedReq(), res)
 
     expect(res.statusCode).toBe(404)
+    expect(res.body).toEqual({ error: 'Account not found', code: 'NOT_FOUND' })
   })
 })
 
@@ -88,6 +89,7 @@ describe('PATCH /api/accounts/:id', () => {
     await handler(authedReq({ method: 'PATCH', body: {} }), res)
 
     expect(res.statusCode).toBe(400)
+    expect(res.body).toEqual({ error: 'No updatable fields provided', code: 'VALIDATION_ERROR' })
   })
 
   it('404s when the account does not exist', async () => {
@@ -104,6 +106,24 @@ describe('PATCH /api/accounts/:id', () => {
 
     const res = mockRes()
     await handler(authedReq({ method: 'PATCH', body: { name: '   ' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a name over the length limit', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { name: 'a'.repeat(301) } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a country over the length limit', async () => {
+    queryMock.mockResolvedValueOnce({ rows: [CALLER_ROW] })
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { country: 'a'.repeat(101) } }), res)
 
     expect(res.statusCode).toBe(400)
   })
@@ -172,6 +192,7 @@ describe('DELETE /api/accounts/:id (archive)', () => {
     await handler(authedReq({ method: 'DELETE' }), res)
 
     expect(res.statusCode).toBe(403)
+    expect(res.body).toEqual({ error: 'Only admins can archive an account', code: 'FORBIDDEN' })
   })
 
   it('404s when the account does not exist', async () => {

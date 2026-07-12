@@ -69,6 +69,7 @@ describe('GET /api/audit-log', () => {
     await handler(authedReq(), res)
 
     expect(res.statusCode).toBe(403)
+    expect(res.body.code).toBe('FORBIDDEN')
   })
 
   it('allows a non-admin when task_id is set, scoped to that task', async () => {

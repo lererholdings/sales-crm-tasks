@@ -116,6 +116,7 @@ describe('POST /api/task-types', () => {
     await handler(authedReq({ method: 'POST', body: { category: 'pre-sale', name: 'Workshop' } }), res)
 
     expect(res.statusCode).toBe(403)
+    expect(res.body).toEqual({ error: 'Forbidden', code: 'FORBIDDEN' })
   })
 
   it('rejects an invalid category', async () => {

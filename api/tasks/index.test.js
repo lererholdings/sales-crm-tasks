@@ -109,6 +109,7 @@ describe('GET /api/tasks', () => {
     await handler(authedReq({ query: { include_deleted: 'true' } }), res)
 
     expect(res.statusCode).toBe(403)
+    expect(res.body).toEqual({ error: 'Forbidden', code: 'FORBIDDEN' })
   })
 
   it('allows include_deleted for an admin', async () => {
@@ -240,6 +241,7 @@ describe('POST /api/tasks', () => {
     await handler(authedReq({ method: 'POST', body: { task_name: 'RFP' } }), res)
 
     expect(res.statusCode).toBe(400)
+    expect(res.body.code).toBe('VALIDATION_ERROR')
   })
 
   it('rejects when assignee_id does not exist', async () => {
@@ -274,6 +276,66 @@ describe('POST /api/tasks', () => {
       authedReq({
         method: 'POST',
         body: { task_name: 'a'.repeat(301), assignee_id: 'assignee1', task_type_id: 'tt1' },
+      }),
+      res,
+    )
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a partner_name over the length limit', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(
+      authedReq({
+        method: 'POST',
+        body: {
+          task_name: 'RFP',
+          assignee_id: 'assignee1',
+          task_type_id: 'tt1',
+          partner_name: 'a'.repeat(301),
+        },
+      }),
+      res,
+    )
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a distributor_name over the length limit', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(
+      authedReq({
+        method: 'POST',
+        body: {
+          task_name: 'RFP',
+          assignee_id: 'assignee1',
+          task_type_id: 'tt1',
+          distributor_name: 'a'.repeat(301),
+        },
+      }),
+      res,
+    )
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a next_action over the length limit', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(
+      authedReq({
+        method: 'POST',
+        body: {
+          task_name: 'RFP',
+          assignee_id: 'assignee1',
+          task_type_id: 'tt1',
+          next_action: 'a'.repeat(501),
+        },
       }),
       res,
     )

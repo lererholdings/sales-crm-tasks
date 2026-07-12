@@ -102,6 +102,7 @@ describe('PATCH /api/tasks/:id/notes/:noteId', () => {
     await handler(authedReq({ body: {} }), res)
 
     expect(res.statusCode).toBe(400)
+    expect(res.body).toEqual({ error: 'content is required', code: 'VALIDATION_ERROR' })
   })
 
   it('400s for whitespace-only content', async () => {
@@ -140,6 +141,7 @@ describe('PATCH /api/tasks/:id/notes/:noteId', () => {
     await handler(authedReq({ body: { content: 'edit' } }), res)
 
     expect(res.statusCode).toBe(403)
+    expect(res.body.code).toBe('FORBIDDEN')
   })
 
   it('403s when a newer note already exists on the same task, even for the author', async () => {

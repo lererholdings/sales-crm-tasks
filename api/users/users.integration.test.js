@@ -82,6 +82,7 @@ describe.skipIf(!hasEnv)('users API integration (real dev DB)', () => {
     )
 
     expect(res.statusCode).toBe(403)
+    expect(res.body.code).toBe('FORBIDDEN')
   })
 
   it('an admin can PATCH another user\'s role', async () => {

@@ -305,5 +305,6 @@ describe.skipIf(!hasEnv)('task notes API integration (real dev DB)', () => {
     )
 
     expect(editRes.statusCode).toBe(403)
+    expect(editRes.body.code).toBe('FORBIDDEN')
   })
 })

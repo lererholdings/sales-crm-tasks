@@ -96,6 +96,7 @@ describe('GET /api/tasks/:id/notes', () => {
     await handler(authedReq(), res)
 
     expect(res.statusCode).toBe(404)
+    expect(res.body).toEqual({ error: 'Task not found', code: 'NOT_FOUND' })
   })
 
   it('hides notes for a soft-deleted task from a non-admin (404)', async () => {

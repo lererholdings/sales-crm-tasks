@@ -180,6 +180,7 @@ describe('PATCH /api/tasks/:id', () => {
     await handler(authedReq({ method: 'PATCH', body: {} }), res)
 
     expect(res.statusCode).toBe(400)
+    expect(res.body).toEqual({ error: 'No updatable fields provided', code: 'VALIDATION_ERROR' })
   })
 
   it('404s for a nonexistent task', async () => {
@@ -189,6 +190,7 @@ describe('PATCH /api/tasks/:id', () => {
     await handler(authedReq({ method: 'PATCH', body: { status: 'in_progress' } }), res)
 
     expect(res.statusCode).toBe(404)
+    expect(res.body).toEqual({ error: 'Task not found', code: 'NOT_FOUND' })
   })
 
   it('rejects a task_name over the length limit', async () => {
@@ -214,6 +216,33 @@ describe('PATCH /api/tasks/:id', () => {
 
     const res = mockRes()
     await handler(authedReq({ method: 'PATCH', body: { sfdc_task_url: 'javascript:alert(1)' } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a partner_name over the length limit', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { partner_name: 'a'.repeat(301) } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a distributor_name over the length limit', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { distributor_name: 'a'.repeat(301) } }), res)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a next_action over the length limit', async () => {
+    queryMock.mockImplementation(mockQueryImpl())
+
+    const res = mockRes()
+    await handler(authedReq({ method: 'PATCH', body: { next_action: 'a'.repeat(501) } }), res)
 
     expect(res.statusCode).toBe(400)
   })
@@ -271,6 +300,7 @@ describe('DELETE /api/tasks/:id', () => {
     await handler(authedReq({ method: 'DELETE' }), res)
 
     expect(res.statusCode).toBe(404)
+    expect(res.body).toEqual({ error: 'Task not found', code: 'NOT_FOUND' })
   })
 
   it('soft-deletes the task, cascades notes, and writes two audit entries', async () => {
