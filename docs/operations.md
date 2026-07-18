@@ -28,12 +28,13 @@ _Milestone 4 branch note: this specific edit is a real (non-empty) markdown-only
 
 | Environment | URL |
 |---|---|
-| Production | https://sales-crm-tasks-lerers-projects.vercel.app |
-| Preview (per branch) | `https://sales-crm-tasks-git-<branch-slug>-lerers-projects.vercel.app` (branch names should stay lowercase-hyphenated for this to match) |
+| **Production (canonical, real entry point)** | **https://lererholdings.com.au/sales-tasks** — via a Vercel Multi Zones rewrite in the separate `website` project ([website#2](https://github.com/lererholdings/website/pull/2)), forwarding to the raw Vercel deployment below with the `/sales-tasks` prefix stripped |
+| Production (raw Vercel URL — do not visit directly) | https://sales-crm-tasks-lerers-projects.vercel.app — broken when visited on its own since `VITE_BASE_PATH=/sales-tasks/` is set on Production ([#24](https://github.com/lererholdings/sales-crm-tasks/pull/24)); see [#25](https://github.com/lererholdings/sales-crm-tasks/issues/25) for the (deferred) fix |
+| Preview (per branch) | `https://sales-crm-tasks-git-<branch-slug>-lerers-projects.vercel.app` (branch names should stay lowercase-hyphenated for this to match) — unaffected by `VITE_BASE_PATH`, still serves at root |
 | Local frontend | http://localhost:5173 |
 | Local api (`vercel dev`) | http://localhost:3000 |
 
-**Vercel Deployment Protection is currently on for all deployments** (Production included) — a Vercel login or the bypass header is needed to reach any of them from outside a browser: `x-vercel-protection-bypass: <VERCEL_PROTECTION_BYPASS_SECRET>`. Tracked for removal from Production before go-live: [issue #1](https://github.com/lererholdings/sales-crm-tasks/issues/1).
+**Vercel Deployment Protection is off entirely** (Milestone 10 go-live decision — see design.md's decision log; per-environment "Only Preview Deployments" scoping needs a paid Vercel plan, not available on Hobby). Clerk is now the sole real access gate — its sign-up mode was switched from public to restricted/invite-only accordingly. [Issue #1](https://github.com/lererholdings/sales-crm-tasks/issues/1) tracked this and is resolved.
 
 ## Environment variables — where each one lives
 
