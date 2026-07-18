@@ -22,7 +22,7 @@ _Milestone 4 branch note: this specific edit is a real (non-empty) markdown-only
 | Vercel | `sales-crm-tasks`, team `lerers-projects` | https://vercel.com/lerers-projects/sales-crm-tasks |
 | Supabase — production | `uuuppszvwbgmyyvrgwmy`, region `ap-southeast-2`, org `ocwzsfhgzwcpirnwfoce` | https://supabase.com/dashboard/project/uuuppszvwbgmyyvrgwmy |
 | Supabase — dev | `mtloxubtjinllxaenavu`, region `ap-southeast-2`, org `ocwzsfhgzwcpirnwfoce` | https://supabase.com/dashboard/project/mtloxubtjinllxaenavu |
-| Clerk | `kind-hedgehog-70` — single instance, used across local/preview/production (no dev/prod split like Supabase has) | https://dashboard.clerk.com |
+| Clerk | `kind-hedgehog-70` — **now has a Development + Production instance split** (Milestone 10; Production instance created by cloning Development, so restricted/invite-only sign-up + Google sign-in config carried over). Development instance still used by local dev + Preview; Production instance used by Vercel's Production environment only | https://dashboard.clerk.com |
 
 ## URLs
 
@@ -41,15 +41,15 @@ _Milestone 4 branch note: this specific edit is a real (non-empty) markdown-only
 | Variable | `.env.local` (root) | `frontend/.env.local` | GitHub Actions secret | Vercel: Production | Vercel: Preview |
 |---|---|---|---|---|---|
 | `DATABASE_URL` | dev project | — | dev project (integration tests) | **prod** project | **dev** project |
-| `CLERK_SECRET_KEY` | yes | — | no | yes | yes |
-| `VITE_CLERK_PUBLISHABLE_KEY` | — | yes | no | yes | yes |
+| `CLERK_SECRET_KEY` | dev instance (test key) | — | no | **prod instance (live key)** | dev instance (test key) |
+| `VITE_CLERK_PUBLISHABLE_KEY` | — | dev instance (test key) | no | **prod instance (live key)** | dev instance (test key) |
 | `TEST_AUTH_BYPASS_SECRET` | yes | — | yes | **never** | yes |
 | `VERCEL_PROTECTION_BYPASS_SECRET` | yes (verification only — not read by app code) | — | yes | n/a | n/a |
 | `VITE_BASE_PATH` | — | — | no | `/sales-tasks/` | — (unset → defaults to `/`) |
 
 Where to get/rotate each value:
 - `DATABASE_URL` — Supabase → Project Settings → Database → Connection Pooling → mode "Transaction" (port 6543, not the direct :5432 one)
-- `CLERK_SECRET_KEY` / `VITE_CLERK_PUBLISHABLE_KEY` — Clerk dashboard → API Keys
+- `CLERK_SECRET_KEY` / `VITE_CLERK_PUBLISHABLE_KEY` — Clerk dashboard → API Keys, per-instance (use the instance switcher to pick Development vs Production before copying — they're separate keys now). Also backed up in the team's Bitwarden vault ("Clerk Production API Keys — sales-crm-tasks").
 - `TEST_AUTH_BYPASS_SECRET` — self-generated (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`), not tied to any external service
 - `VERCEL_PROTECTION_BYPASS_SECRET` — Vercel → Project Settings → Deployment Protection → "Protection Bypass for Automation"
 - `VITE_BASE_PATH` — self-defined, not tied to any external service. Set to `/sales-tasks/` only on Production (Milestone 10, Multi Zones — see design.md's decision log and [website#2](https://github.com/lererholdings/website/pull/2)), scoped to Production only so Preview deployments keep serving at `/` for normal branch/PR testing. Consumed by `frontend/vite.config.js` (`base`), `frontend/src/main.jsx` (React Router `basename`), and `frontend/src/lib/apiClient.js` (API call prefixing) — see [#24](https://github.com/lererholdings/sales-crm-tasks/pull/24). Known tradeoff once live: the raw `sales-crm-tasks-lerers-projects.vercel.app` URL stops working when visited directly (tracked in [#25](https://github.com/lererholdings/sales-crm-tasks/issues/25)).
