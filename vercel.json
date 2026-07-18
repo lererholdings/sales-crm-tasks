@@ -1,9 +1,6 @@
 {
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
-  "redirects": [
-    { "source": "/((?!sales-tasks(?:/|$))(?!api(?:/|$)).*)", "destination": "/sales-tasks/$1", "permanent": false }
-  ],
   "rewrites": [
     { "source": "/sales-tasks/api/:path*", "destination": "/api/:path*" },
     { "source": "/sales-tasks/assets/:path*", "destination": "/assets/:path*" },
