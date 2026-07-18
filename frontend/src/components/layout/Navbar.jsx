@@ -43,7 +43,11 @@ export default function Navbar() {
       >
         <i className={`ti ${theme === 'dark' ? 'ti-sun' : 'ti-moon'}`} />
       </button>
-      <UserButton afterSignOutUrl="/" />
+      {/* UserButton's own afterSignOutUrl wins over ClerkProvider's (main.jsx)
+          for the sign-out it triggers — must stay base-path-aware too, or
+          signing out lands at the domain root instead of e.g. /sales-tasks/
+          (see docs/design.md's Multi Zones decision log entry). */}
+      <UserButton afterSignOutUrl={import.meta.env.BASE_URL} />
     </nav>
   )
 }
