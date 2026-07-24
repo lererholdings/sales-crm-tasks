@@ -1,6 +1,11 @@
 import { Fragment, useCallback, useMemo, useState } from 'react'
 import { groupTasks } from '../../lib/groupTasks.js'
-import { DEFAULT_COLUMN_ORDER, TASK_NAME_COLUMN, getVisibleOrderedTaskColumns } from '../../lib/columns.js'
+import {
+  DEFAULT_COLUMN_ORDER,
+  DEFAULT_COLUMN_VISIBILITY,
+  TASK_NAME_COLUMN,
+  getVisibleOrderedTaskColumns,
+} from '../../lib/columns.js'
 import TaskGroupHeader from './TaskGroupHeader.jsx'
 import TaskRow from './TaskRow.jsx'
 
@@ -28,7 +33,7 @@ export default function TaskTable({
   onDeleteRequest,
   onLinkToAccount,
   columnOrder = DEFAULT_COLUMN_ORDER,
-  columnVisibility = {},
+  columnVisibility = DEFAULT_COLUMN_VISIBILITY,
   sortBy = null,
   sortDir = 'asc',
   onSort = () => {},

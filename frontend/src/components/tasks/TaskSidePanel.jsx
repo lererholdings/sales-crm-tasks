@@ -42,6 +42,7 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
       eta: task.eta ?? '',
       assignee_id: task.assignee?.id ?? '',
       next_action: task.next_action ?? '',
+      sfdc_task_url: task.sfdc_task_url ?? '',
       status: task.status,
       priority: task.priority,
     })
@@ -61,6 +62,7 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
         eta: form.eta || null,
         assignee_id: form.assignee_id,
         next_action: form.next_action || null,
+        sfdc_task_url: form.sfdc_task_url || null,
         status: form.status,
         priority: form.priority,
       })
@@ -177,16 +179,6 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
                   <i className="ti ti-external-link" /> SFDC account
                 </a>
               )}
-              {isSafeUrl(task.sfdc_task_url) && (
-                <a
-                  href={task.sfdc_task_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-[12px] text-accent hover:underline"
-                >
-                  <i className="ti ti-external-link" /> SFDC task
-                </a>
-              )}
             </div>
           </div>
 
@@ -244,6 +236,24 @@ export default function TaskSidePanel({ taskId, notesPreviewCount = 2, onClose, 
                 onChange={(e) => setForm({ ...form, next_action: e.target.value })}
               />
             </label>
+            <label className="mb-2 block text-[12px] text-text-secondary">
+              SFDC task URL
+              <input
+                className="mt-1 w-full rounded-lg border border-border bg-bg-input px-3 py-1.5 text-[13px] text-text-primary"
+                value={form.sfdc_task_url}
+                onChange={(e) => setForm({ ...form, sfdc_task_url: e.target.value })}
+              />
+            </label>
+            {isSafeUrl(task.sfdc_task_url) && (
+              <a
+                href={task.sfdc_task_url}
+                target="_blank"
+                rel="noreferrer"
+                className="mb-2 inline-flex items-center gap-1 text-[12px] text-accent hover:underline"
+              >
+                <i className="ti ti-external-link" /> SFDC task
+              </a>
+            )}
 
             {error && <p className="mb-2 text-[12px] text-urgent">{error}</p>}
 

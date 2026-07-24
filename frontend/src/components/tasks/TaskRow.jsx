@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { isSafeUrl } from '../../lib/safeUrl.js'
 import AssigneeChip from '../ui/AssigneeChip.jsx'
 import PriorityBadge from '../ui/PriorityBadge.jsx'
 import StatusPill from '../ui/StatusPill.jsx'
@@ -32,6 +33,20 @@ function renderCell(columnKey, task, eta) {
       return <StatusPill status={task.status} />
     case 'eta':
       return eta.text
+    case 'sfdc':
+      return isSafeUrl(task.sfdc_task_url) ? (
+        <a
+          href={task.sfdc_task_url}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-accent hover:underline"
+        >
+          <i className="ti ti-external-link" />
+        </a>
+      ) : (
+        <span className="text-text-muted">—</span>
+      )
     case 'notes_preview':
       return <NotesPreview notes={task.notes} />
     case 'last_updated':

@@ -126,6 +126,42 @@ describe('TaskTable', () => {
     expect(statusHeader.querySelector('.ti-arrow-down')).toBeFalsy()
   })
 
+  it('is hidden by default (opt-in, like accounts\' ACV column)', () => {
+    render(<TaskTable tasks={[task()]} onOpen={vi.fn()} onDuplicate={vi.fn()} onDeleteRequest={vi.fn()} />)
+
+    expect(screen.queryByText('SFDC')).toBeFalsy()
+  })
+
+  it('shows an SFDC link when the column is made visible and the task has one set', () => {
+    render(
+      <TaskTable
+        tasks={[task({ sfdc_task_url: 'https://sfdc.example.com/t1' })]}
+        onOpen={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDeleteRequest={vi.fn()}
+        columnVisibility={{ sfdc: true }}
+      />,
+    )
+
+    expect(screen.getByText('SFDC')).toBeTruthy()
+    const link = document.querySelector('a[href="https://sfdc.example.com/t1"]')
+    expect(link).toBeTruthy()
+  })
+
+  it('shows no SFDC link when the task has no URL set', () => {
+    render(
+      <TaskTable
+        tasks={[task({ sfdc_task_url: null })]}
+        onOpen={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDeleteRequest={vi.fn()}
+        columnVisibility={{ sfdc: true }}
+      />,
+    )
+
+    expect(document.querySelector('a[target="_blank"]')).toBeFalsy()
+  })
+
   it('hides a column when columnVisibility marks it false', () => {
     render(
       <TaskTable

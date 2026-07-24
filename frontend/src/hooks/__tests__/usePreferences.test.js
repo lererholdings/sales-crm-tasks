@@ -38,7 +38,7 @@ describe('usePreferences', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.preferences.column_order[0]).toBe('status')
-    expect(result.current.preferences.column_visibility).toEqual({ eta: false })
+    expect(result.current.preferences.column_visibility).toEqual({ sfdc: false, eta: false })
   })
 
   it('applies a patch optimistically and PATCHes it to the server', async () => {
