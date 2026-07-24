@@ -174,6 +174,50 @@ describe('TaskSidePanel', () => {
     expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ status: 'done' }))
   })
 
+  it('always shows an editable SFDC task URL field, even when it starts empty', async () => {
+    mockFetchByUrl({ '/api/tasks/t1?notes_limit': TASK_DETAIL, '/api/users?me=true': CURRENT_USER })
+
+    render(<TaskSidePanel taskId="t1" onClose={vi.fn()} onUpdated={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('First note')).toBeTruthy())
+
+    // Unlike the read-only "SFDC account"/"SFDC task" open-links (only shown
+    // once a URL exists), this input must always render — otherwise an
+    // initially-empty sfdc_task_url could never be set through the UI.
+    expect(screen.getByText('SFDC task URL')).toBeTruthy()
+    expect(screen.queryByText('SFDC task', { selector: 'a' })).toBeFalsy()
+  })
+
+  it('saves the SFDC task URL through the same Save flow as other fields', async () => {
+    mockFetchByUrl({
+      '/api/tasks/t1?notes_limit': TASK_DETAIL,
+      '/api/users?me=true': CURRENT_USER,
+      '/api/tasks/t1': (_url, opts) => {
+        if (opts?.method === 'PATCH') {
+          const body = JSON.parse(opts.body)
+          return { ...TASK_DETAIL, ...body }
+        }
+        return TASK_DETAIL
+      },
+    })
+
+    render(<TaskSidePanel taskId="t1" onClose={vi.fn()} onUpdated={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('First note')).toBeTruthy())
+
+    fireEvent.change(screen.getByText('SFDC task URL').querySelector('input'), {
+      target: { value: 'https://sfdc.example.com/task/t1' },
+    })
+    fireEvent.click(screen.getByText('Save'))
+
+    await waitFor(() => {
+      const patchCall = global.fetch.mock.calls.find(
+        ([url, opts]) => url === '/api/tasks/t1' && opts?.method === 'PATCH',
+      )
+      expect(patchCall).toBeDefined()
+      const body = JSON.parse(patchCall[1].body)
+      expect(body.sfdc_task_url).toBe('https://sfdc.example.com/task/t1')
+    })
+  })
+
   it('keeps the task\'s own type selectable even after it is deactivated, but excludes other inactive types', async () => {
     mockFetchByUrl({
       '/api/tasks/t1?notes_limit': TASK_DETAIL,

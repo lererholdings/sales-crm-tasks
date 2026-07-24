@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useApiClient } from '../lib/apiClient.js'
-import { DEFAULT_COLUMN_ORDER, normalizeTaskColumnOrder } from '../lib/columns.js'
+import { DEFAULT_COLUMN_ORDER, DEFAULT_COLUMN_VISIBILITY, normalizeTaskColumnOrder } from '../lib/columns.js'
 import {
   DEFAULT_ACCOUNT_COLUMN_ORDER,
   DEFAULT_ACCOUNT_COLUMN_VISIBILITY,
@@ -9,7 +9,7 @@ import {
 
 const DEFAULT_PREFERENCES = {
   column_order: DEFAULT_COLUMN_ORDER,
-  column_visibility: {},
+  column_visibility: DEFAULT_COLUMN_VISIBILITY,
   notes_preview_count: 2,
   accounts_column_order: DEFAULT_ACCOUNT_COLUMN_ORDER,
   accounts_column_visibility: DEFAULT_ACCOUNT_COLUMN_VISIBILITY,
@@ -28,7 +28,10 @@ export function usePreferences() {
         if (cancelled) return
         setPreferences({
           column_order: normalizeTaskColumnOrder(data.column_order),
-          column_visibility: data.column_visibility ?? {},
+          // Layered, not just a nullish fallback — see the accounts_column_visibility
+          // comment below for why (an unset `sfdc` key must still resolve to
+          // hidden, matching accounts' ACV column precedent).
+          column_visibility: { ...DEFAULT_COLUMN_VISIBILITY, ...data.column_visibility },
           notes_preview_count: data.notes_preview_count ?? 2,
           accounts_column_order: normalizeAccountColumnOrder(data.accounts_column_order),
           // Layered, not just a nullish fallback: an unset `acv` key must

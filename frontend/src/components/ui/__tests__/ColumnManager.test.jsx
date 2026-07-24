@@ -59,7 +59,7 @@ describe('ColumnManager', () => {
     fireEvent.dragOver(screen.getByRole('listitem', { name: 'Priority' }))
     fireEvent.drop(screen.getByRole('listitem', { name: 'Priority' }))
 
-    expect(onReorder).toHaveBeenCalledWith(['assignee', 'next_action', 'type', 'priority', 'status', 'eta', 'notes_preview', 'last_updated'])
+    expect(onReorder).toHaveBeenCalledWith(['assignee', 'next_action', 'type', 'priority', 'status', 'eta', 'sfdc', 'notes_preview', 'last_updated'])
   })
 
   it('does nothing when a column is dropped on itself', () => {
